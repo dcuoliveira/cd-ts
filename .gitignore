@@ -3,3 +3,5 @@
 
 .Rproj.user
 cd-ts.Rproj
+
+src/debugs/fit_lasso_var.nb.html
