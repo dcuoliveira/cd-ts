@@ -7,6 +7,7 @@ dependencies:
   - r-dplyr
   - r-BigVAR
   - r-data.table
+  - r-reticulate
   - python
   - pandas
   - pdblp
