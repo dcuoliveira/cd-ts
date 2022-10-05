@@ -1,5 +1,5 @@
 ---
-title: "Debug VAR elastic net"
+title: "Fit lasso VAR to stock indices dataset"
 output: html_notebook
 ---
 
@@ -7,6 +7,10 @@ output: html_notebook
 rm(list=ls())
 library("dplyr")
 library("BigVAR")
+library("RcppCNPy")
+
+data <- npyLoad(file.path(dirname(getwd()), "data", "feat_train_stock_indexes.npy"))
+tail(data)
 ```
 
 ## 1
@@ -20,6 +24,7 @@ data(Y)
 ts.plot(Y, col = c("red", "black", "blue"))
 dim(Y)
 ```
+
 We then use the BigVAR.fit function to, given a set of input parameters, estimate the VAR model coefficient matrix $B$. More specifically, the model assumes maximum lag order for the VAR of 2, lambda parameter of  1 (shrinkage degree) and the VAR structure (i.e. Basic mean VARX-L).
 
 The notation for the model is as follows:
