@@ -1,0 +1,103 @@
+---
+title: "Debug VAR elastic net"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+library("dplyr")
+library("BigVAR")
+```
+
+## 1
+
+Lets start with the an example from the package documentation.
+
+As it can be seen, we start with a multivariate time-series data with 100 observations and 3 variables.
+
+```{r}
+data(Y)
+ts.plot(Y, col = c("red", "black", "blue"))
+dim(Y)
+```
+We then use the BigVAR.fit function to, given a set of input parameters, estimate the VAR model coefficient matrix $B$. More specifically, the model assumes maximum lag order for the VAR of 2, lambda parameter of  1 (shrinkage degree) and the VAR structure (i.e. Basic mean VARX-L).
+
+The notation for the model is as follows:
+
+$$
+\mathbb{y}_t = \mathbb{\alpha} + \sum_{i=1}^{p}\mathbb{\Phi}^{(i)}\mathbb{y}_{t-i} + \sum_{j=1}^{s}\mathbb{\beta}^{(i)}\mathbb{x}_{t-j} + \mathbb{u}_t
+$$
+
+```{r}
+B = BigVAR.fit(Y = Y,
+               struct = 'Basic',
+               p = 1,
+               lambda = 1,
+               intercept = TRUE)
+B[,,1]
+```
+
+## 2
+
+Now, let's specify the global parameters of the notebook for the specific problem at hand
+
+```{r}
+FILE_PATH <- getwd()
+DATA_PATH <- file.path(dirname(FILE_PATH), "data", "inputs")
+DIR_NAMES <- list.dirs(DATA_PATH, recursive = FALSE)
+  
+DATASET_NAMES <- c("test_data_dgp")
+TARGET_NAME <- "betas_dgp"
+```
+
+Next, we choose one of the dir names so as to test the VAR elastic net on the simulated DGP.
+
+```{r}
+dgp_name <- DIR_NAMES[1]
+ds <- DATASET_NAMES[1] 
+
+data <- read.csv(file.path(dgp_name, paste0(ds, ".csv")))
+Y <- data %>% as.matrix()
+
+dim(data)
+head(data)
+```
+
+```{r}
+B <- BigVAR.fit(Y = Y,
+                struct = 'BasicEN',
+                p = 1,
+                lambda = 1,
+                intercept = FALSE)[,,1]
+dim(B)
+```
+
+
+To build the hyperparameter search procedure for the lambda value of the penalized VAR model, we use the "constructModel" function. This function has the following useful parameters:
+
+> 1) gran: Two options for the grid of penalty parameters, the first option controls the depth of the lambda grid (a good default option is 50). The second option controls the number of grid values (a good default is 10);
+> 2) h: Forecast horizon in which to optimize (default 1);
+> 3) cv: Type of validation;
+> 4) IC: Boolean. If True, returns AIC and BIC for the models;
+> 5)  model.controls: ;
+
+
+```{r}
+model_search <- constructModel(Y = Y,
+                               p = 1,
+                               struct = "BasicEN",
+                               gran = c(150, 10), 
+                               h = 1, 
+                               cv = "Rolling",
+                               verbose = FALSE,
+                               IC = TRUE,
+                               model.controls=list(intercept=FALSE))
+results_model_search <- cv.BigVAR(model_search)
+results_model_search@OptimalLambda
+```
+
+Once we have the optimal lambda, we can apply it to the test data
+
+
+
+
