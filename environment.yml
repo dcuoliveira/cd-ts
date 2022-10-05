@@ -10,5 +10,7 @@ dependencies:
   - r-reticulate
   - python
   - pandas
+  - numpy
   - pdblp
   - tqdm
+  - jupyterlab

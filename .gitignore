@@ -5,3 +5,5 @@
 cd-ts.Rproj
 
 src/debugs/fit_lasso_var.nb.html
+
+src/debugs/.ipynb_checkpoints
