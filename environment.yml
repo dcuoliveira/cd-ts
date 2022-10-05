@@ -1,0 +1,13 @@
+name: cd-ts
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - r-base
+  - r-dplyr
+  - r-BigVAR
+  - r-data.table
+  - python
+  - pandas
+  - pdblp
+  - tqdm
