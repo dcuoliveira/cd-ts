@@ -13,7 +13,7 @@ except:
 DEBUG = True
 
 def generate_stock_dataset(savepath):
-    df = pd.read_excel(os.path.join(os.path.dirname(__file__), "data", "utils", "stock_index_metadata.xlsx"))
+    df = pd.read_excel(os.path.join(os.path.dirname(__file__), "utils", "stock_index_metadata.xlsx"))
 
     for s in tqdm(list(df["Region"].unique()),
                   total=len(list(df["Region"].unique()))):
