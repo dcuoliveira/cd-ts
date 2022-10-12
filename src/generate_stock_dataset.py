@@ -1,22 +1,20 @@
 import pandas as pd
-import numpy as np
 from tqdm import tqdm
-import pdblp # TODO - Install blpapi
-
+import numpy as np
 import os
-import time
-import argparse
 
-def parse_args():
-    pass
-
-def generate_dataset():
-    con = pdblp.BCon(timeout=5000000)
+try:
+    import pdblp
+    con = pdblp.BCon(timeout=50000)
     con.start()
+except:
+    raise Exception("You do not have a bloomberg terminal installed, please ask for the dataset with the authors")
 
-    df = pd.read_excel("stock_indexes_metadata.xlsx")
+DEBUG = True
 
-    data = {}
+def generate_stock_dataset(savepath):
+    df = pd.read_excel(os.path.join(os.path.dirname(__file__), "data", "utils", "stock_index_metadata.xlsx"))
+
     for s in tqdm(list(df["Region"].unique()),
                   total=len(list(df["Region"].unique()))):
 
@@ -42,19 +40,17 @@ def generate_dataset():
         # apply log difference transformation
         tickers_df = np.log(tickers_df).diff().dropna()
 
-        data[s] = tickers_df
-
-    data_all = np.array([data[s].to_numpy() for s in data.keys()])
-    edges_all = None
-
-    return data_all, edges_all
+        # save elements of the dataset
+        np.savez(file=os.path.join(savepath, s + suffix + ".npz"),
+                 X_np=tickers_df.to_numpy(),
+                 Gref=None,
+                 n=np.array(tickers_df.shape[1]),
+                 T=np.array(tickers_df.shape[0]))
 
 if __name__ == '__main__':
-    savepath = os.path.dirname(__file__)
-    suffix = "_stock_indices"
-    data_all, edges_all = generate_dataset()
+    if DEBUG:
+        savepath = os.path(os.path.dirname(__file__), "data/world_stock_indexes")
+        suffix = "_stock_indexes"
 
-    np.save(
-        os.path.join(savepath, "feat_train" + suffix + ".npy"),
-        data_train,
-    )
+        generate_stock_dataset(savepath=savepath,
+                               suffix=suffix)
