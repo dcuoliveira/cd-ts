@@ -3,6 +3,8 @@
 
 .Rproj.user
 cd-ts.Rproj
+.RData
+.Rhistory
 
 src/debugs/fit_lasso_var.nb.html
 
