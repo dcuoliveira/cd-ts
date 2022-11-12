@@ -5,78 +5,30 @@ output: html_notebook
 
 ```{r}
 rm(list=ls())
+
+# load required packages
+library("reticulate")
+library("tidyr")
 library("dplyr")
 library("BigVAR")
-library("RcppCNPy")
+library("data.table")
 
-data <- npyLoad(file.path(dirname(getwd()), "data", "feat_train_stock_indexes.npy"))
-tail(data)
+# load numpy package
+np <- import("numpy")
+
+# load sample dataset
+npz_obj <- np$load(file.path(dirname(getwd()), "data", "world_stock_indexes", "americas_stock_indexes.npz"))
+
+data <- npz_obj["X_np"]
+k <- dim(data)[2]
+p <- 5
+penalty <- "BasicEN"
+cv_type <- "Rolling"
+steps <- 1
+verbose <- FALSE
+intercept <- FALSE
+T = 100
 ```
-
-## 1
-
-Lets start with the an example from the package documentation.
-
-As it can be seen, we start with a multivariate time-series data with 100 observations and 3 variables.
-
-```{r}
-data(Y)
-ts.plot(Y, col = c("red", "black", "blue"))
-dim(Y)
-```
-
-We then use the BigVAR.fit function to, given a set of input parameters, estimate the VAR model coefficient matrix $B$. More specifically, the model assumes maximum lag order for the VAR of 2, lambda parameter of  1 (shrinkage degree) and the VAR structure (i.e. Basic mean VARX-L).
-
-The notation for the model is as follows:
-
-$$
-\mathbb{y}_t = \mathbb{\alpha} + \sum_{i=1}^{p}\mathbb{\Phi}^{(i)}\mathbb{y}_{t-i} + \sum_{j=1}^{s}\mathbb{\beta}^{(i)}\mathbb{x}_{t-j} + \mathbb{u}_t
-$$
-
-```{r}
-B = BigVAR.fit(Y = Y,
-               struct = 'Basic',
-               p = 1,
-               lambda = 1,
-               intercept = TRUE)
-B[,,1]
-```
-
-## 2
-
-Now, let's specify the global parameters of the notebook for the specific problem at hand
-
-```{r}
-FILE_PATH <- getwd()
-DATA_PATH <- file.path(dirname(FILE_PATH), "data", "inputs")
-DIR_NAMES <- list.dirs(DATA_PATH, recursive = FALSE)
-  
-DATASET_NAMES <- c("test_data_dgp")
-TARGET_NAME <- "betas_dgp"
-```
-
-Next, we choose one of the dir names so as to test the VAR elastic net on the simulated DGP.
-
-```{r}
-dgp_name <- DIR_NAMES[1]
-ds <- DATASET_NAMES[1] 
-
-data <- read.csv(file.path(dgp_name, paste0(ds, ".csv")))
-Y <- data %>% as.matrix()
-
-dim(data)
-head(data)
-```
-
-```{r}
-B <- BigVAR.fit(Y = Y,
-                struct = 'BasicEN',
-                p = 1,
-                lambda = 1,
-                intercept = FALSE)[,,1]
-dim(B)
-```
-
 
 To build the hyperparameter search procedure for the lambda value of the penalized VAR model, we use the "constructModel" function. This function has the following useful parameters:
 
@@ -88,20 +40,46 @@ To build the hyperparameter search procedure for the lambda value of the penaliz
 
 
 ```{r}
-model_search <- constructModel(Y = Y,
-                               p = 1,
-                               struct = "BasicEN",
-                               gran = c(150, 10), 
-                               h = 1, 
-                               cv = "Rolling",
-                               verbose = FALSE,
+model_search <- constructModel(Y = data,
+                               p = p,
+                               struct = penalty,
+                               gran = c(150, 20), 
+                               h = steps, 
+                               cv = cv_type,
+                               verbose = verbose,
                                IC = TRUE,
                                model.controls=list(intercept=FALSE))
 results_model_search <- cv.BigVAR(model_search)
+# results_model_search@LambdaGrid
 results_model_search@OptimalLambda
 ```
 
-Once we have the optimal lambda, we can apply it to the test data
+Once we have the optimal lambda, we can fit the model in the data to produce the sparse matrix of coefficients:
+
+```{r}
+B <- BigVAR.fit(Y = data,
+                struct = 'BasicEN',
+                p = 5,
+                lambda = results_model_search@OptimalLambda,
+                intercept = FALSE)[,,1]
+B <- B[ , 2:ncol(B)]
+```
+
+Finally, we can use the sparse matrix of coefficients to simulate similar VAR processes:
+
+```{r}
+A <- VarptoVar1MC(B, p, k)
+Y <- MultVarSim(k = k,
+                A1 = A,
+                p = p,
+                Sigma = .1*diag(k),
+                T = T)
+
+ts.plot(Y, col = 1:k)
+```
+
+
+
 
 
 
