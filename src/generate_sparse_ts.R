@@ -96,7 +96,10 @@ for (g in groups){
             file = file.path(data_files, "simulation", file_name))
 
     # 3. non-linear (in parameter) relationships - TVAR model
-    tvar_fit <- TVAR(target_ts, lag = p, dummyToBothRegimes = TRUE, include = "none")
+    tvar_fit <- TVAR(target_ts,
+                     lag = p,
+                     dummyToBothRegimes = TRUE,
+                     include = "none")
     B_TVAR <- cbind(tvar_fit$coefficients[["Bdown"]], # nolint
                     tvar_fit$coefficients[["Bup"]])
     file_name <- paste0(g, "_TVAR_B.csv") # nolint
