@@ -111,7 +111,8 @@ for (g in groups){
                          lag = p,
                          mTh = 1,
                          nthresh = 1,
-                         Thresh = tvar_fit$model.specific$Thresh)
+                         Thresh = tvar_fit$model.specific$Thresh,
+                         include = "none")
     file_name <- paste0(g, "_tvar_simulation.csv") # nolint
     write.csv2(x = tvar_sim,
               file = file.path(data_files, "simulation", file_name))
