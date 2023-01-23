@@ -103,7 +103,7 @@ for (g in groups){
     write.csv2(x = B_TVAR,
               file = file.path(data_files, "DGP", file_name))
 
-    tvar_sim <- TVAR.sim(B = B,
+    tvar_sim <- TVAR.sim(B = B_TVAR,
                          n = size,
                          lag = p,
                          mTh = 1,
