@@ -15,11 +15,16 @@ data_files <- file.path(source_code, "data")
 stocks_files <- file.path(data_files, "world_stock_indexes")
 groups <- c("americas", "asia_and_pacific", "europe", "mea")
 
+# check if dir exists
+dir.create(file.path(data_files, "simulation"), showWarnings = FALSE)
+dir.create(file.path(data_files, "DGP"), showWarnings = FALSE)
+
 for (g in groups){
     # load data
     target_file <- file.path(stocks_files, paste0(g, "_stock_indexes.npz"))
     target_data <- np$load(target_file)
     target_ts <- target_data["X_np"] %>% as.data.table()
+    size <- dim(target_ts)[1]
 
     # select AR component of VAR model
     var_select_model <- VARselect(y = target_ts, lag.max = 10)
@@ -49,12 +54,15 @@ for (g in groups){
                     lambda = optimal_lambda,
                     intercept = FALSE)[, , 1]
     B <- B[, 2:(p * dim(target_ts)[2] + 1)]
-
-    # check if dir exists
-    dir.create(file.path(data_files, "simulation"), showWarnings = FALSE)
+    file_name <- paste0(g, "VAR_B.csv") # nolint
+    write.csv2(x = B,
+              file = file.path(data_files, "DGP", file_name))
 
     # simulate from fitted VAR model
-    var_sim <- VAR.sim(B = B, n = 2000, lag = p, include = "none")
+    var_sim <- VAR.sim(B = B,
+                       n = size,
+                       lag = p,
+                       include = "none")
     file_name <- paste0(g, "_var_simulation.csv")
     write.csv2(x = var_sim,
             file = file.path(data_files, "simulation", file_name))
@@ -88,15 +96,22 @@ for (g in groups){
             file = file.path(data_files, "simulation", file_name))
 
     # 3. non-linear (in parameter) relationships - TVAR model
-    # setar_sim <- TVAR.sim(B = B,
-    #                       n = 2000,
-    #                       lag = p,
-    #                       include = "none",
-    #                       nthresh = 1,
-    #                       Thresh = 2)
-    # file_name <- paste0(g, "_setar_simulation.csv") # nolint
-    # write.csv2(x = var_sim,
-    #           file = file.path(data_files, "simulation", file_name))
+    tvar_fit <- TVAR(target_ts, lag = p, dummyToBothRegimes = TRUE)
+    B_TVAR <- cbind(tvar_fit$coefficients[["Bdown"]], # nolint
+                    tvar_fit$coefficients[["Bup"]])
+    file_name <- paste0(g, "TVAR_B.csv") # nolint
+    write.csv2(x = B_TVAR,
+              file = file.path(data_files, "DGP", file_name))
+
+    tvar_sim <- TVAR.sim(B = B,
+                         n = size,
+                         lag = p,
+                         mTh = 1,
+                         nthresh = 1,
+                         Thresh = tvar_fit$model.specific$Thresh)
+    file_name <- paste0(g, "_tvar_simulation.csv") # nolint
+    write.csv2(x = tvar_sim,
+              file = file.path(data_files, "simulation", file_name))
 
     # 4. instantaneous effects
 }
