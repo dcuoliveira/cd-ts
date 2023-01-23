@@ -54,7 +54,7 @@ for (g in groups){
                     lambda = optimal_lambda,
                     intercept = FALSE)[, , 1]
     B <- B[, 2:(p * dim(target_ts)[2] + 1)]
-    file_name <- paste0(g, "VAR_B.csv") # nolint
+    file_name <- paste0(g, "_VAR_B.csv") # nolint
     write.csv2(x = B,
               file = file.path(data_files, "DGP", file_name))
 
@@ -99,7 +99,7 @@ for (g in groups){
     tvar_fit <- TVAR(target_ts, lag = p, dummyToBothRegimes = TRUE)
     B_TVAR <- cbind(tvar_fit$coefficients[["Bdown"]], # nolint
                     tvar_fit$coefficients[["Bup"]])
-    file_name <- paste0(g, "TVAR_B.csv") # nolint
+    file_name <- paste0(g, "_TVAR_B.csv") # nolint
     write.csv2(x = B_TVAR,
               file = file.path(data_files, "DGP", file_name))
 
