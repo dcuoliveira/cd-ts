@@ -14,3 +14,6 @@ dependencies:
   - pdblp
   - tqdm
   - jupyterlab
+  - pyg
+  - pygod
+  - networkx
