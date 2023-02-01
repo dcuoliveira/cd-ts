@@ -8,12 +8,13 @@ dependencies:
   - r-BigVAR
   - r-data.table
   - r-reticulate
-  - python
+  - python=3.9.0
   - pandas
   - numpy
+  - scipy
   - pdblp
   - tqdm
   - jupyterlab
-  - pyg
-  - pygod
+  - pytorch
+  - pyg-lib
   - networkx
