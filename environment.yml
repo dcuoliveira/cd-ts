@@ -17,5 +17,6 @@ dependencies:
   - jupyterlab
   - pytorch
   - pyg-lib
+  - pygod
   - networkx
   - scikit-learn
