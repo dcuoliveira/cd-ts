@@ -2,21 +2,27 @@ name: cd-ts
 channels:
   - defaults
   - conda-forge
+  - pytorch
+  - pyg
 dependencies:
   - r-base
   - r-dplyr
   - r-BigVAR
   - r-data.table
   - r-reticulate
-  - python=3.9.0
+  - python=3.10.0
   - pandas
   - numpy
   - scipy
   - pdblp
   - tqdm
   - jupyterlab
-  - pytorch
   - pyg-lib
   - pygod
+  - pytorch
+  - torchvision 
+  - torchaudio 
+  - pyg 
+  - pytorch-sparse 
   - networkx
   - scikit-learn
