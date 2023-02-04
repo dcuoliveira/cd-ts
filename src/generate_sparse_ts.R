@@ -57,7 +57,7 @@ for (g in groups){
     file_name <- paste0(g, "_var_B.csv") # nolint
     write.csv(x = B,
              file = file.path(data_files, "DGP", file_name),
-             row.names = TRUE)
+             row.names = FALSE)
 
     # simulate from fitted VAR model
     var_sim <- VAR.sim(B = B,
@@ -111,7 +111,7 @@ for (g in groups){
     file_name <- paste0(g, "_tvar_B.csv") # nolint
     write.csv(x = B_TVAR,
               file = file.path(data_files, "DGP", file_name),
-              row.names = TRUE)
+              row.names = FALSE)
 
     tvar_sim <- TVAR.sim(B = B_TVAR,
                          n = size,
