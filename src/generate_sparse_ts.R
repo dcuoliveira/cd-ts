@@ -54,11 +54,10 @@ for (g in groups){
                     lambda = optimal_lambda,
                     intercept = FALSE)[, , 1]
     B <- B[, 2:(p * dim(target_ts)[2] + 1)]
-    file_name <- paste0(g, "_VAR_B.csv") # nolint
-    write.csv2(x = B,
-              file = file.path(data_files, "DGP", file_name),
-              row.names = FALSE,
-              sep = ",")
+    file_name <- paste0(g, "_var_B.csv") # nolint
+    write.csv(x = B,
+             file = file.path(data_files, "DGP", file_name),
+             row.names = TRUE)
 
     # simulate from fitted VAR model
     var_sim <- VAR.sim(B = B,
@@ -66,46 +65,41 @@ for (g in groups){
                        lag = p,
                        include = "none")
     file_name <- paste0(g, "_var_simulation.csv")
-    write.csv2(x = var_sim,
+    write.csv(x = var_sim,
               file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE,
-              sep = ",")
+              row.names = FALSE)
 
     # 1. add noise to VAR simulation
 
     ## a) gaussian noise
     var_sim_gaussian_noise <- var_sim + rnorm(n = dim(var_sim)[1], mean = 0, sd = 1) # nolint
     file_name <- paste0(g, "_var_simulation_gaussian.csv")
-    write.csv2(x = var_sim_gaussian_noise,
+    write.csv(x = var_sim_gaussian_noise,
               file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE,
-              sep = ",")
+              row.names = FALSE)
 
     ## b) non-gaussian noise
     var_sim_uniform_noise <- var_sim + runif(n = dim(var_sim)[1], min = 0, max = 1) # nolint
     file_name <- paste0(g, "_var_simulation_nongaussian.csv")
-    write.csv2(x = var_sim_uniform_noise,
-               file = file.path(data_files, "simulation", file_name),
-               row.names = FALSE,
-               sep = ",")
+    write.csv(x = var_sim_uniform_noise,
+              file = file.path(data_files, "simulation", file_name),
+              row.names = FALSE)
 
     # 2. resampled series
 
     ## a) weekly
     var_sim_weekly <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 5), ]
     file_name <- paste0(g, "_var_simulation_weekly.csv")
-    write.csv2(x = var_sim_weekly,
-               file = file.path(data_files, "simulation", file_name),
-               row.names = FALSE,
-               sep = ",")
+    write.csv(x = var_sim_weekly,
+              file = file.path(data_files, "simulation", file_name),
+              row.names = FALSE)
 
     ## b) monthly
     var_sim_monthly <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 20), ]
     file_name <- paste0(g, "_var_simulation_monthly.csv")
-    write.csv2(x = var_sim_monthly,
-               file = file.path(data_files, "simulation", file_name),
-               row.names = FALSE,
-               sep = ",")
+    write.csv(x = var_sim_monthly,
+              file = file.path(data_files, "simulation", file_name),
+              row.names = FALSE)
 
     # 3. non-linear (in parameter) relationships - TVAR model
     tvar_fit <- TVAR(target_ts,
@@ -114,11 +108,10 @@ for (g in groups){
                      include = "none")
     B_TVAR <- cbind(tvar_fit$coefficients[["Bdown"]], # nolint
                     tvar_fit$coefficients[["Bup"]])
-    file_name <- paste0(g, "_TVAR_B.csv") # nolint
-    write.csv2(x = B_TVAR,
-               file = file.path(data_files, "DGP", file_name),
-               row.names = FALSE,
-               sep = ",")
+    file_name <- paste0(g, "_tvar_B.csv") # nolint
+    write.csv(x = B_TVAR,
+              file = file.path(data_files, "DGP", file_name),
+              row.names = TRUE)
 
     tvar_sim <- TVAR.sim(B = B_TVAR,
                          n = size,
@@ -128,10 +121,9 @@ for (g in groups){
                          Thresh = tvar_fit$model.specific$Thresh,
                          include = "none")
     file_name <- paste0(g, "_tvar_simulation.csv") # nolint
-    write.csv2(x = tvar_sim,
-               file = file.path(data_files, "simulation", file_name),
-               row.names = FALSE,
-               sep = ",")
+    write.csv(x = tvar_sim,
+              file = file.path(data_files, "simulation", file_name),
+              row.names = FALSE)
 
     # 4. instantaneous effects
 }
