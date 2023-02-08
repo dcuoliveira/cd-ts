@@ -25,10 +25,11 @@ class VGAEWrapper():
         self.params = {
               'learning_rate': trial.suggest_loguniform('learning_rate', 1e-5, 1e-1),
               'n_hidden_units': trial.suggest_int("n_hidden_units", 10, 100),
+              'n_output': trial.suggest_int("n_output", 10, 20),
               'optimizer': trial.suggest_categorical("optimizer", ["Adam"]),
-              'n_input': trial.suggest_int("n_input", data.drop([target_name], axis=1).shape[1], data.drop([target_name], axis=1).shape[1]),
+              'n_input': trial.suggest_int("n_input", input_size, input_size),
               }
-        self.epochs = 100
+        self.n_epochs = 100
 
         self.ModelClass = VGAE(n_input=self.params["n_input"],
                                n_hidden_units=self.params["n_hidden_units"],
@@ -62,7 +63,7 @@ def eval_link_predictor(model, data):
 def train_and_evaluate_link_prediction(data, model_wrapper, criterion, verbose, trial):
 
     # instantiate model wrapper
-    model_wrapper = model_wrapper(input_size=data.x.shape[1], trial=trial)
+    model_wrapper = model_wrapper(input_size=data.number_of_nodes, trial=trial)
     
     # get wrapper parameters
     model = model_wrapper.ModelClass
@@ -81,6 +82,8 @@ def train_and_evaluate_link_prediction(data, model_wrapper, criterion, verbose, 
 
     train_data, val_data, test_data = split(data)
 
+    train_loss_values = []
+    val_auc_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation", disable=not verbose):
 
         model.train()
@@ -104,16 +107,25 @@ def train_and_evaluate_link_prediction(data, model_wrapper, criterion, verbose, 
 
         out = model.decode(z, edge_label_index).view(-1)
         loss = criterion(out, edge_label)
+        train_loss_values.append(loss.item())
+
         loss.backward()
         optimizer.step()
 
         val_auc = eval_link_predictor(model, val_data)
+        val_auc_values.append(val_auc)
 
         if verbose:
             if epoch % 10 == 0:
                 print(f"Epoch: {epoch:03d}, Train Loss: {loss:.3f}, Val AUC: {val_auc:.3f}")
-    
+    train_loss_values_df = pd.DataFrame(train_loss_values, columns=["loss"])
+    val_auc_values_df = pd.DataFrame(val_auc_values, columns=["auc"])
+
     test_auc = eval_link_predictor(model, test_data)
+
+    trial.set_user_attr("train_loss_values", train_loss_values_df) 
+    trial.set_user_attr("val_auc_values", val_auc_values_df) 
+    trial.set_user_attr("test_auc", test_auc) 
 
     return test_auc
 
@@ -133,62 +145,97 @@ if __name__ == "__main__":
     import os
     import pandas as pd
     from torch_geometric.data import Data
+    from utils.Pyutils import save_pkl
 
     ## hyperparameters ##
-    n_trials = 2
+    n_trials = 50
     model_wrapper = VGAEWrapper
     criterion = torch.nn.BCEWithLogitsLoss()
     verbose = False
 
     ## dataset ##
-    source_code = os.path.join(os.getcwd())
+    source_code = os.path.join(os.getcwd(), "src")
     data_files = os.path.join(source_code, "data")
+    output_files = os.path.join(data_files, "outputs")
 
-    dgp_simulations = os.listdir(os.path.join(data_files, "simulation"))
+    dgp_simulations = ["americas", "asia_and_pacific", "europe", "mea"]
+    dgp_models = ["var"]
 
+    results = {}
+    error_dgps = {}
     for dgp_name in dgp_simulations:
-        dgp_name_summary = "_".join(dgp_name.split(".")[0].split("_")[:2])
+        for model in dgp_models:
 
-        # load asset returns data
-        rets_features = pd.read_csv(os.path.join(data_files, "simulation", dgp_simulations[0]), sep=",")
-        rets_features.columns = list(range(0, rets_features.shape[1]))
+            target_dgp_names = [filename for filename in os.listdir(os.path.join(data_files, "simulation")) if filename.startswith(dgp_name)]
+            for file in target_dgp_names:
+                # load asset returns data
+                rets_features = pd.read_csv(os.path.join(data_files, "simulation", file), sep=",")
+                rets_features.columns = list(range(0, rets_features.shape[1])) # fix names
 
-        # load model connection parameters (e.g. B matrix for VAR like models)
-        dgp = pd.read_csv(os.path.join(data_files, "DGP", "{}_B.csv".format(dgp_name_summary)), sep=",")
-        dgp.columns = list(range(dgp.shape[0], dgp.shape[1] + dgp.shape[0]))
+                # load model connection parameters (e.g. B matrix for VAR like models)
+                dgp = pd.read_csv(os.path.join(data_files, "DGP", "{}_{}_B.csv".format(dgp_name, model)), sep=",")
+                dgp.columns = list(range(dgp.shape[0], dgp.shape[1] + dgp.shape[0])) # fix
 
-        # infer autoregressive terms and expand returns data
-        p = int((dgp.shape[1] / rets_features.shape[1]))
-        k = rets_features.shape[1]
-        count = k
-        for i in range(1, p + 1):
-            for j in range(k):
-                rets_features[count] = rets_features[j].shift(i)
-                count += 1
-        rets_features = rets_features.dropna()
+                # infer autoregressive terms and expand returns data
+                p = int((dgp.shape[1] / rets_features.shape[1]))
+                k = rets_features.shape[1]
+                count = k
 
-        # connection parameters are edges
-        edges = dgp.copy()
+                # expand nodes to include lags
+                for i in range(1, p + 1):
+                    for j in range(k):
+                        rets_features[count] = rets_features[j].shift(i)
+                        count += 1
+                rets_features = rets_features.dropna()
 
-        # create adjacency matrix from edges
-        adj_matrix = np.where(edges.__abs__() != 0, 1, np.nan)
-        adj = pd.DataFrame(adj_matrix, index=edges.index, columns=edges.columns).reset_index().melt("index").dropna()
+                # connection parameters are edges
+                edges = dgp.copy()
 
-        # create edge index
-        row = torch.from_numpy(adj.index.to_numpy().astype(np.int64)).to(torch.long)
-        col = torch.from_numpy(adj.variable.to_numpy().astype(np.int64)).to(torch.long)
-        edge_index = torch.stack([row, col], dim=0)
+                # create adjacency matrix from edges
+                adj_matrix = np.where(edges.__abs__() != 0, 1, np.nan)
+                adj = pd.DataFrame(adj_matrix, index=edges.index, columns=edges.columns).reset_index().melt("index").dropna()
 
-        # put graph data together
-        data = Data(x=x, y=y, edge_index=edge_index, number_of_nodes=x.shape[1])
+                # create edge index
+                row = torch.from_numpy(adj.index.to_numpy().astype(np.int64)).to(torch.long)
+                col = torch.from_numpy(adj.variable.to_numpy().astype(np.int64)).to(torch.long)
+                edge_index = torch.stack([row, col], dim=0)
 
-        study = optuna.create_study(direction="minimize", sampler=optuna.samplers.TPESampler())
-        study.optimize(lambda trial: objective(
+                # create features
+                x = torch.from_numpy(rets_features.to_numpy()).type(torch.float32)
 
-            data=data,
-            model_wrapper=model_wrapper,
-            criterion=criterion,
-            verbose=verbose,
-            trial=trial
+                # create lables (no lebels for this task)
+                y = None
 
-            ), n_trials=n_trials)
+                # put graph data together
+                data = Data(x=x, y=y, edge_index=edge_index, number_of_nodes=x.shape[1])
+
+                try:
+                    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler())
+                    study.optimize(lambda trial: objective(
+
+                        data=data,
+                        model_wrapper=model_wrapper,
+                        criterion=criterion,
+                        verbose=verbose,
+                        trial=trial
+
+                        ), n_trials=n_trials)
+                except:
+                    error_dgps[file.split(".")[0]] = {"data": data}
+
+                    continue
+                
+                results[file.split(".")[0]] = {
+                    
+                    "best_params": study.best_params,
+                    "train_loss_values": study.best_trial.user_attrs["train_loss_values"],
+                    "val_auc_values": study.best_trial.user_attrs["val_auc_values"],
+                    "test_auc": study.best_trial.user_attrs["test_auc"]
+                    
+                    }
+        
+    save_pkl(data=results,
+             path=os.path.join(output_files,  "{}_results.pickle".format("_".join(dgp_models))))
+    
+    save_pkl(data=error_dgps,
+             path=os.path.join(output_files, "{}_error.pickle".format("_".join(dgp_models))))
