@@ -15,23 +15,29 @@ data_files <- file.path(source_code, "data")
 stocks_files <- file.path(data_files, "world_stock_indexes")
 groups <- c("americas", "asia_and_pacific", "europe", "mea")
 
+# multivariate time-series process characteristics
+functional_forms <- c("linear", "nonlinear")
+error_term_dists <- c("gaussian", "nongaussian")
+sampling_freq <- c("daily", "monthly")
+Ts <- c(100, 500, 1000, 2000, 3000, 4000, 5000)
+
 # check if dir exists
 dir.create(file.path(data_files, "simulation"), showWarnings = FALSE)
 dir.create(file.path(data_files, "DGP"), showWarnings = FALSE)
 
 for (g in groups){
-    # load data
-    target_file <- file.path(stocks_files, paste0(g, "_stock_indexes.npz"))
-    target_data <- np$load(target_file)
-    target_ts <- target_data["X_np"] %>% as.data.table()
-    size <- dim(target_ts)[1]
-
-    # select AR component of VAR model
-    var_select_model <- VARselect(y = target_ts, lag.max = 10)
-    p <- mode(var_select_model$selection)
-
-    # define lasso VAR model
-    var_lasso_model <- constructModel(Y = target_ts %>% as.matrix(),
+  # load data
+  target_file <- file.path(stocks_files, paste0(g, "_stock_indexes.npz"))
+  target_data <- np$load(target_file)
+  target_ts <- target_data["X_np"] %>% as.data.table()
+  size <- dim(target_ts)[1]
+  
+  # select AR component of VAR model
+  var_select_model <- VARselect(y = target_ts, lag.max = 10)
+  p <- mode(var_select_model$selection)
+  
+  # define lasso VAR model
+  var_lasso_model <- constructModel(Y = target_ts %>% as.matrix(),
                                     p = p,
                                     struct = "Basic",
                                     gran = c(150, 10),
@@ -40,90 +46,71 @@ for (g in groups){
                                     verbose = FALSE,
                                     IC = TRUE,
                                     model.controls = list(intercept = TRUE))
-
-    # use cross-validation to find the penalty parameters
-    cv_results <- cv.BigVAR(var_lasso_model)
-    # plot(cv_results) # nolint
-    # SparsityPlot.BigVAR.results(cv_results) # nolint
-    optimal_lambda <- cv_results@OptimalLambda
-
-    # lasso VAR model
-    B <- BigVAR.fit(Y = target_ts %>% as.matrix(),
-                    p = p,
-                    struct = "Basic",
-                    lambda = optimal_lambda,
-                    intercept = FALSE)[, , 1]
-    B <- B[, 2:(p * dim(target_ts)[2] + 1)]
-    file_name <- paste0(g, "_var_B.csv") # nolint
-    write.csv(x = B,
-             file = file.path(data_files, "DGP", file_name),
-             row.names = FALSE)
-
-    # simulate from fitted VAR model
-    var_sim <- VAR.sim(B = B,
-                       n = size,
-                       lag = p,
-                       include = "none")
-    file_name <- paste0(g, "_var_simulation.csv")
-    write.csv(x = var_sim,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    # 1. add noise to VAR simulation
-
-    ## a) gaussian noise
-    var_sim_gaussian_noise <- var_sim + rnorm(n = dim(var_sim)[1], mean = 0, sd = 1) # nolint
-    file_name <- paste0(g, "_var_simulation_gaussian.csv")
-    write.csv(x = var_sim_gaussian_noise,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    ## b) non-gaussian noise
-    var_sim_uniform_noise <- var_sim + runif(n = dim(var_sim)[1], min = 0, max = 1) # nolint
-    file_name <- paste0(g, "_var_simulation_nongaussian.csv")
-    write.csv(x = var_sim_uniform_noise,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    # 2. resampled series
-
-    ## a) weekly
-    var_sim_weekly <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 5), ]
-    file_name <- paste0(g, "_var_simulation_weekly.csv")
-    write.csv(x = var_sim_weekly,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    ## b) monthly
-    var_sim_monthly <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 20), ]
-    file_name <- paste0(g, "_var_simulation_monthly.csv")
-    write.csv(x = var_sim_monthly,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    # 3. non-linear (in parameter) relationships - TVAR model
-    tvar_fit <- TVAR(target_ts,
-                     lag = p,
-                     dummyToBothRegimes = TRUE,
-                     include = "none")
-    B_TVAR <- cbind(tvar_fit$coefficients[["Bdown"]], # nolint
-                    tvar_fit$coefficients[["Bup"]])
-    file_name <- paste0(g, "_tvar_B.csv") # nolint
-    write.csv(x = B_TVAR,
-              file = file.path(data_files, "DGP", file_name),
-              row.names = FALSE)
-
-    tvar_sim <- TVAR.sim(B = B_TVAR,
-                         n = size,
-                         lag = p,
-                         mTh = 1,
-                         nthresh = 1,
-                         Thresh = tvar_fit$model.specific$Thresh,
-                         include = "none")
-    file_name <- paste0(g, "_tvar_simulation.csv") # nolint
-    write.csv(x = tvar_sim,
-              file = file.path(data_files, "simulation", file_name),
-              row.names = FALSE)
-
-    # 4. instantaneous effects
+  
+  # use cross-validation to find the penalty parameters
+  cv_results <- cv.BigVAR(var_lasso_model)
+  # plot(cv_results) # nolint
+  # SparsityPlot.BigVAR.results(cv_results) # nolint
+  optimal_lambda <- cv_results@OptimalLambda
+  
+  # lasso VAR model
+  B <- BigVAR.fit(Y = target_ts %>% as.matrix(),
+                  p = p,
+                  struct = "Basic",
+                  lambda = optimal_lambda,
+                  intercept = FALSE)[, , 1]
+  B <- B[, 2:(p * dim(target_ts)[2] + 1)]
+  
+  for (f in functional_forms){
+    for (ed in error_term_dists){
+      for (sf in sampling_freq){
+        for (size in Ts){
+          file_name <- paste0(g, "_", size)
+          
+          # functional form
+          if (f == "linear"){
+            var_sim <- VAR.sim(B = B,
+                               n = size,
+                               lag = p,
+                               include = "none")
+          }else if (f == "nonlinear"){
+            tvar_fit <- TVAR(target_ts,
+                             lag = p,
+                             dummyToBothRegimes = TRUE,
+                             include = "none")
+            B <- cbind(tvar_fit$coefficients[["Bdown"]],
+                       tvar_fit$coefficients[["Bup"]])
+            var_sim <- TVAR.sim(B = B,
+                                n = size,
+                                lag = p,
+                                mTh = 1,
+                                nthresh = 1,
+                                Thresh = tvar_fit$model.specific$Thresh,
+                                include = "none")
+          }
+          file_name <- paste0(file_name, "_", f)
+          
+          # error term dist
+          if (ed == "gaussian"){
+            var_sim <- var_sim
+          }else if (ed == "nongaussian"){
+            var_sim <- var_sim + runif(n = dim(var_sim)[1], min = 0, max = 1) # nolint
+          }
+          file_name <- paste0(file_name, "_", ed)
+          
+          # sampling freq
+          if (sf == "daily"){
+            var_sim <- var_sim
+          }else if (sf == "monthly"){
+            var_sim <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 20), ] # nolint
+          }
+          file_name <- paste0(file_name, "_", sf)
+          
+          np$savez(file.path(data_files, "simulations", file_name),
+                   simulation=var_sim, coefficients=B)
+        }
+      }
+    }
+  }
+  
 }
