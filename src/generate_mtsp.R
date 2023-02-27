@@ -39,7 +39,7 @@ for (g in groups){
   # define lasso VAR model
   var_lasso_model <- constructModel(Y = target_ts %>% as.matrix(),
                                     p = p,
-                                    struct = "Basic",
+                                    struct = "BasicEN",
                                     gran = c(150, 10),
                                     h = 1,
                                     cv = "Rolling",
@@ -56,7 +56,7 @@ for (g in groups){
   # lasso VAR model
   B <- BigVAR.fit(Y = target_ts %>% as.matrix(),
                   p = p,
-                  struct = "Basic",
+                  struct = "BasicEN",
                   lambda = optimal_lambda,
                   intercept = FALSE)[, , 1]
   B <- B[, 2:(p * dim(target_ts)[2] + 1)]
