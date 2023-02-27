@@ -7,7 +7,6 @@ from training.runners import run_training_procedure
 ## hyperparameters ##
 n_trials = 50
 model_wrapper = RadomClass
-criterion = torch.nn.BCEWithLogitsLoss()
 verbose = False
 
 ## dataset path ##
@@ -27,4 +26,5 @@ if __name__ == "__main__":
      results = run_training_procedure(files=files,
                                       input_path=os.path.join(data_files, "simulations"),
                                       output_path=output_files,
-                                      model_wrapper=model_wrapper)
+                                      model_wrapper=model_wrapper,
+                                      verbose=verbose)
