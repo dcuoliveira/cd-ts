@@ -22,7 +22,7 @@ sampling_freq <- c("daily", "monthly")
 Ts <- c(100, 500, 1000, 2000, 3000, 4000, 5000)
 
 # check if dir exists
-dir.create(file.path(data_files, "simulation"), showWarnings = FALSE)
+dir.create(file.path(data_files, "simulations"), showWarnings = FALSE)
 dir.create(file.path(data_files, "DGP"), showWarnings = FALSE)
 
 for (g in groups){
