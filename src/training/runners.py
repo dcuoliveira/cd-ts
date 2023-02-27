@@ -63,12 +63,17 @@ def run_training_procedure(files, input_path, output_path, model_wrapper, n_tria
           if wrapper.model_name == "random":
                adj_train, adj_test = train_test_split(adj, test_size=0.1, random_state=0)
 
-               predict = wrapper.model(adj=adj_train)
+               test_auc, val_auc_values = wrapper.model(adj=adj_train, adj_test=adj_test, n=wrapper.n_epochs, val_size=0.1)
 
                best_params = np.nan
                train_loss_values = np.nan
-               val_auc_values = study.best_trial.user_attrs["val_auc_values"]
-               test_auc = study.best_trial.user_attrs["test_auc"]
+          elif wrapper.model_name == "majority":
+               adj_train, adj_test = train_test_split(adj, test_size=0.1, random_state=0)
+
+               test_auc, val_auc_values = wrapper.model(adj=adj_train, adj_test=adj_test, n=wrapper.n_epochs, val_size=0.1)
+
+               best_params = np.nan
+               train_loss_values = np.nan
           elif wrapper.model_name == "vgae":
                # delete no edge rows
 
