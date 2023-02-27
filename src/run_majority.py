@@ -1,5 +1,4 @@
 import os
-import torch
 
 from models.naive import MajorityClass
 from training.runners import run_training_procedure

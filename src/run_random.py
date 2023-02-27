@@ -1,5 +1,4 @@
 import os
-import torch
 
 from models.naive import RadomClass
 from training.runners import run_training_procedure
