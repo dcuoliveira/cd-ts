@@ -9,7 +9,11 @@ from sklearn.model_selection import train_test_split
 from training.optimization import train_and_evaluate_link_prediction
 from utils.Pyutils import save_pkl
 
-def gnn_link_prediction_objective(data, model_wrapper, criterion, verbose, trial):
+def gnn_link_prediction_objective(data,
+                                  model_wrapper,
+                                  criterion,
+                                  verbose,
+                                  trial):
          
      loss = train_and_evaluate_link_prediction(data=data,
                                                model_wrapper=model_wrapper,
@@ -19,7 +23,14 @@ def gnn_link_prediction_objective(data, model_wrapper, criterion, verbose, trial
 
      return loss
 
-def run_training_procedure(files, input_path, output_path, model_wrapper, n_trials=None, criterion=None, verbose=False):
+def run_training_procedure(files,
+                           input_path,
+                           output_path,
+                           model_wrapper,
+                           model_name=None,
+                           n_trials=None,
+                           criterion=None,
+                           verbose=False):
 
      results = {}
      for file in files:
@@ -59,27 +70,29 @@ def run_training_procedure(files, input_path, output_path, model_wrapper, n_tria
           adj_matrix = np.where(edges.__abs__() != 0, 1, 0)
           adj = pd.DataFrame(adj_matrix, index=edges.index, columns=edges.columns).reset_index().melt("index")
 
-          wrapper = model_wrapper()
-          if wrapper.model_name == "random":
+          if model_name == "random":
+               wrapper = model_wrapper()
                adj_train, adj_test = train_test_split(adj, test_size=0.1, random_state=0)
 
                test_auc, val_auc_values = wrapper.model(adj=adj_train, adj_test=adj_test, n=wrapper.n_epochs, val_size=0.1)
 
                best_params = np.nan
                train_loss_values = np.nan
-          elif wrapper.model_name == "majority":
+          elif model_name == "majority":
+               wrapper = model_wrapper()
                adj_train, adj_test = train_test_split(adj, test_size=0.1, random_state=0)
 
                test_auc, val_auc_values = wrapper.model(adj=adj_train, adj_test=adj_test, n=wrapper.n_epochs, val_size=0.1)
 
                best_params = np.nan
                train_loss_values = np.nan
-          elif wrapper.model_name == "vgae":
+          elif model_name == "vgae":
                # delete no edge rows
-
-                # create edge index
-               row = torch.from_numpy(adj.index.to_numpy().astype(np.int64)).to(torch.long)
-               col = torch.from_numpy(adj.variable.to_numpy().astype(np.int64)).to(torch.long)
+               adj = adj.loc[adj["value"] != 0]
+               
+               # create edge index
+               row = torch.from_numpy(adj["index"].to_numpy().astype(np.int64)).to(torch.long)
+               col = torch.from_numpy(adj["variable"].to_numpy().astype(np.int64)).to(torch.long)
                edge_index = torch.stack([row, col], dim=0)
 
                # create features
