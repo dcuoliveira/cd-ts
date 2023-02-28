@@ -7,6 +7,7 @@ from training.runners import run_training_procedure
 n_trials = 50
 model_wrapper = MajorityClass
 verbose = False
+model_name = MajorityClass().model_name
 
 ## dataset path ##
 source_code = os.path.join(os.getcwd(), "src")
@@ -26,4 +27,5 @@ if __name__ == "__main__":
                                       input_path=os.path.join(data_files, "simulations"),
                                       output_path=output_files,
                                       model_wrapper=model_wrapper,
+                                      model_name=model_name,
                                       verbose=verbose)
