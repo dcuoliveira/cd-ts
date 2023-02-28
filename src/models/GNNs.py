@@ -5,7 +5,7 @@ from torch_geometric.nn import GCNConv
 class VGAE(torch.nn.Module):
     def __init__(self, n_input, n_hidden_units, n_output):
         super().__init__()
-        self.conv1 = GCNConv(n_input, n_hidden_units)
+        self.conv1 = GCNConv(n_input, 2 * n_hidden_units)
         self.conv2 = GCNConv(n_hidden_units, n_output)
 
     def encode(self, x, edge_index):
