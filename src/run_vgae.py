@@ -32,4 +32,5 @@ if __name__ == "__main__":
                                       model_wrapper=model_wrapper,
                                       criterion=criterion,
                                       model_name=model_name,
+                                      n_trials=n_trials,
                                       verbose=verbose)
