@@ -16,7 +16,7 @@ stocks_files <- file.path(data_files, "world_stock_indexes")
 groups <- c("americas", "asia_and_pacific", "europe", "mea")
 
 # multivariate time-series process characteristics
-functional_forms <- c("linear") # "nonlinear"
+functional_forms <- c("linear", "nonlinear")
 error_term_dists <- c("gaussian", "nongaussian")
 sampling_freq <- c("daily", "monthly")
 Ts <- c(100, 500, 1000, 2000, 3000, 4000, 5000)
@@ -49,8 +49,8 @@ for (g in groups){
   
   # use cross-validation to find the penalty parameters
   cv_results <- cv.BigVAR(var_lasso_model)
-  # plot(cv_results) # nolint
-  # SparsityPlot.BigVAR.results(cv_results) # nolint
+  # plot(cv_results)
+  # SparsityPlot.BigVAR.results(cv_results)
   optimal_lambda <- cv_results@OptimalLambda
   
   # lasso VAR model
@@ -68,6 +68,7 @@ for (g in groups){
           file_name <- paste(g, size, f, ed, sf, sep = "_")
           
           if (!file.exists(file.path(data_files, "simulations", paste0(file_name, ".npz")))){
+            
             # functional form
             if (f == "linear"){
               var_sim <- VAR.sim(B = B,
@@ -75,38 +76,31 @@ for (g in groups){
                                  lag = p,
                                  include = "none")
             }else if (f == "nonlinear"){
-              tvar_fit <- TVAR(target_ts,
-                               lag = p,
-                               dummyToBothRegimes = TRUE,
-                               include = "none")
-              B <- cbind(tvar_fit$coefficients[["Bdown"]],
-                         tvar_fit$coefficients[["Bup"]])
-              var_sim <- TVAR.sim(B = B,
-                                  n = size,
-                                  lag = p,
-                                  mTh = 1,
-                                  nthresh = 1,
-                                  Thresh = tvar_fit$model.specific$Thresh,
-                                  include = "none")
+              var_sim <- VAR.sim(B = B,
+                                 n = size,
+                                 lag = p,
+                                 include = "none")
+              var_sim[var_sim > 0] <- var_sim[var_sim > 0] * 0.5
+              var_sim[var_sim < 0] <- var_sim[var_sim < 0] * 1.5
             }
 
             # error term dist
             if (ed == "gaussian"){
               var_sim <- var_sim
             }else if (ed == "nongaussian"){
-              browser()
-              var_sim <- var_sim + runif(n = dim(var_sim)[1], min = 0, max = 1) # nolint
+              var_sim <- var_sim + runif(n = dim(var_sim)[1], min = 0, max = 1)
             }
 
             # sampling freq
             if (sf == "daily"){
               var_sim <- var_sim
             }else if (sf == "monthly"){
-              var_sim <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 20), ] # nolint
+              var_sim <- var_sim[seq(from = 1, to = dim(var_sim)[1], by = 20), ]
             }
             
             np$savez(file.path(data_files, "simulations", file_name),
                      simulation=var_sim, coefficients=B)
+            
           }
         }
       }
