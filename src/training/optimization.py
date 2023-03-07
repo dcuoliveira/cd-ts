@@ -3,9 +3,9 @@ from torch_geometric.utils import negative_sampling
 import torch_geometric.transforms as T    
 
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import accuracy_score
 from tqdm import tqdm  
-
+import numpy as np
 
 @torch.no_grad()
 def eval_link_predictor(model, data):
@@ -30,7 +30,7 @@ def eval_link_predictor(model, data):
 
     out = model.decode(z=z, edge_label_index=edge_label_index).view(-1).sigmoid()
 
-    return roc_auc_score(edge_label.cpu().numpy(), out.cpu().numpy())
+    return accuracy_score(edge_label.cpu().numpy(), np.where(out.cpu().numpy() > 0.5, 1, 0))
 
 def train_and_evaluate_link_prediction(data, model_wrapper, criterion, verbose, trial):
 
