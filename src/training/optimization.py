@@ -6,96 +6,56 @@ import pandas as pd
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm  
 import numpy as np
+from sklearn.model_selection import train_test_split
 
-@torch.no_grad()
-def eval_link_predictor(model, data):
-    
-    model.eval()
-    z = model.encode(x=data.x, edge_index=data.edge_index)
+from utils.Pyutils import my_softmax, kl_categorical_uniform, edge_accuracy
 
-    # sampling training negatives for every training epoch
-    neg_edge_index = negative_sampling(edge_index=data.edge_index,
-                                        num_nodes=data.num_nodes,
-                                        num_neg_samples=data.edge_label_index.size(1), 
-                                        method='sparse')
+def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, model_wrapper, verbose, trial):
 
-    edge_label_index = torch.cat(
-        [data.edge_label_index, neg_edge_index],
-        dim=-1,
-    )
-    edge_label = torch.cat([
-        data.edge_label,
-        data.edge_label.new_zeros(neg_edge_index.size(1))
-    ], dim=0)
-
-    out = model.decode(z=z, edge_label_index=edge_label_index).view(-1).sigmoid()
-
-    return accuracy_score(edge_label.cpu().numpy(), np.where(out.cpu().numpy() > 0.5, 1, 0))
-
-def train_and_evaluate_link_prediction(data, model_wrapper, criterion, verbose, trial):
-
+    # TODO - n_in = number of observations in the paper ...
     # instantiate model wrapper
-    model_wrapper = model_wrapper(input_size=data.number_of_nodes, trial=trial)
+    model_wrapper = model_wrapper(n_in=data.shape[1], trial=trial)
     
     # get wrapper parameters
     model = model_wrapper.ModelClass
+
+    # TODO - Optimizing over parameters, the authors avoid thi
     param = model_wrapper.params
     n_epochs = model_wrapper.n_epochs
     optimizer = getattr(torch.optim, param['optimizer'])(model.parameters(), lr= param['learning_rate'])
 
-    # split links
-    split = T.RandomLinkSplit(
-        num_val=0.1,
-        num_test=0.1,
-        disjoint_train_ratio=0.3,
-        neg_sampling_ratio=2.0,
-        add_negative_train_samples=False,
-    )
+    # TODO - Random splits, even for time series
+    # TODO - Splits considered at the time dimension
+    train_data, val_data = train_test_split(data, test_size=0.8)
+    val_data, test_data = train_test_split(val_data, test_size=0.5)
 
-    train_data, val_data, test_data = split(data)
-
-    train_loss_values = []
+    train_auc_values = []
     val_auc_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation", disable=not verbose):
 
         model.train()
         optimizer.zero_grad()
-        z = model.encode(x=train_data.x, edge_index=train_data.edge_index)
+        # TODO - One sample is considered at a time (innputs=traind_data)
+        logits = model.forward(inputs=train_data, rel_rec=rel_rec, rel_send=rel_send)
+        prob = my_softmax(logits, -1)
 
-        # sampling training negatives for every training epoch
-        neg_edge_index = negative_sampling(edge_index=train_data.edge_index,
-                                           num_nodes=train_data.num_nodes,
-                                           num_neg_samples=train_data.edge_label_index.size(1), 
-                                           method='sparse')
+        loss = kl_categorical_uniform(preds=prob,
+                                      num_atoms=data.shape[0],
+                                      num_edge_types=2)
 
-        edge_label_index = torch.cat(
-            [train_data.edge_label_index, neg_edge_index],
-            dim=-1,
-        )
-        edge_label = torch.cat([
-            train_data.edge_label,
-            train_data.edge_label.new_zeros(neg_edge_index.size(1))
-        ], dim=0)
-
-        out = model.decode(z, edge_label_index).view(-1)
-        loss = criterion(out, edge_label)
-        train_loss_values.append(loss.item())
+        acc = edge_accuracy(preds=logits,
+                            target=target)
+        train_auc_values.append(acc)
 
         loss.backward()
         optimizer.step()
 
-        val_auc = eval_link_predictor(model, val_data)
-        val_auc_values.append(val_auc)
-
-        if verbose:
-            if epoch % 10 == 0:
-                print(f"Epoch: {epoch:03d}, Train Loss: {loss:.3f}, Val AUC: {val_auc:.3f}")
-    train_loss_values_df = pd.DataFrame(train_loss_values, columns=["loss"])
+    train_auc_values_df = pd.DataFrame(train_auc_values, columns=["loss"])
     val_auc_values_df = pd.DataFrame(val_auc_values, columns=["auc"])
 
     test_auc = eval_link_predictor(model, test_data)
 
-    trial.set_user_attr("train_loss_values", train_loss_values_df) 
+    trial.set_user_attr("train_auc_values", train_auc_values_df) 
     trial.set_user_attr("val_auc_values", val_auc_values_df) 
     trial.set_user_attr("test_auc", test_auc) 
 
