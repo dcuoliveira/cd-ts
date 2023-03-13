@@ -67,7 +67,7 @@ class NRIMLP(torch.nn.Module):
         return self.fc_out(x)
     
 class NRIMLPWrapper():
-    def __init__(self, n_in, n_hid, n_out):
+    def __init__(self, n_in, n_hid=256, n_out=2):
         self.model_name = "nrimlp"
         self.n_epochs = 100
 
