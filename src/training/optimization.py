@@ -30,12 +30,10 @@ def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, mode
     val_data, test_data = train_test_split(val_data, test_size=0.5)
 
     train_auc_values = []
-    val_auc_values = []
-    for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation", disable=not verbose):
+    for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: train data", disable=not verbose):
 
         model.train()
         optimizer.zero_grad()
-        # TODO - One sample is considered at a time (innputs=traind_data)
         logits = model.forward(inputs=train_data, rel_rec=rel_rec, rel_send=rel_send)
         prob = my_softmax(logits, -1)
 
@@ -50,13 +48,23 @@ def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, mode
         loss.backward()
         optimizer.step()
 
-    train_auc_values_df = pd.DataFrame(train_auc_values, columns=["loss"])
-    val_auc_values_df = pd.DataFrame(val_auc_values, columns=["auc"])
+    val_auc_values = []
+    for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: test data", disable=not verbose):
 
-    test_auc = eval_link_predictor(model, test_data)
+        model.train()
+        optimizer.zero_grad()
+        logits = model.forward(inputs=val_data, rel_rec=rel_rec, rel_send=rel_send)
+        prob = my_softmax(logits, -1)
 
-    trial.set_user_attr("train_auc_values", train_auc_values_df) 
-    trial.set_user_attr("val_auc_values", val_auc_values_df) 
-    trial.set_user_attr("test_auc", test_auc) 
+        loss = kl_categorical_uniform(preds=prob,
+                                      num_atoms=data.shape[0],
+                                      num_edge_types=2)
 
-    return test_auc
+        acc = edge_accuracy(preds=logits,
+                            target=target)
+        val_auc_values.append(acc)
+
+        loss.backward()
+        optimizer.step()
+
+    return None
