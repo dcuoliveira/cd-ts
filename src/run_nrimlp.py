@@ -6,7 +6,6 @@ from training.runners import run_training_procedure
 from models.GNNs import NRIMLPWrapper
 
 ## hyperparameters ##
-n_trials = 50
 model_wrapper = NRIMLPWrapper
 verbose = False
 model_name = "nrimlp"
@@ -31,5 +30,4 @@ if __name__ == "__main__":
                                       model_wrapper=model_wrapper,
                                       criterion=None,
                                       model_name=model_name,
-                                      n_trials=n_trials,
                                       verbose=verbose)
