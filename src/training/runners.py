@@ -14,7 +14,6 @@ def run_training_procedure(files,
                            output_path,
                            model_wrapper,
                            model_name=None,
-                           n_trials=None,
                            criterion=None,
                            verbose=False):
 
