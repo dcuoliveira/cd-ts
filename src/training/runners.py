@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import torch
 from torch_geometric.data import Data
-import optuna
 from sklearn.model_selection import train_test_split
+from torch.utils.data.dataset import TensorDataset
+from torch.utils.data import DataLoader
 
 from training.optimization import train_and_evaluate_link_prediction_nri
 from utils.Pyutils import save_pkl, expand_melted_df, encode_onehot
@@ -13,8 +14,8 @@ def run_training_procedure(files,
                            input_path,
                            output_path,
                            model_wrapper,
+                           batch_size,
                            model_name=None,
-                           criterion=None,
                            verbose=False):
 
      results = {}
@@ -81,24 +82,52 @@ def run_training_procedure(files,
                # create target
                adj = adj.loc[adj["value"] != 0]
                adj = expand_melted_df(adj=adj)
-               target = torch.from_numpy(adj.pivot_table(index="index", columns="variable", values="value").fillna(0).to_numpy()).type(torch.float32)
+               edges_matrix = torch.from_numpy(adj.pivot_table(index="index", columns="variable", values="value").fillna(0).to_numpy()).type(torch.float32)
+               # square matrix of lagged relationships with no contemporaneous dependencies
+               edges_array = edges_matrix.view(1, edges_matrix.shape[0], edges_matrix.shape[0])
 
                # create features
                x = torch.from_numpy(rets_features.to_numpy()).type(torch.float32)
 
-               # Generate off-diagonal interaction graph
-               off_diag = np.ones([rets_features.shape[1], rets_features.shape[1]]) # - np.eye(rets_features.shape[1])
+               # generate off-diagonal interaction (fully connected) graph
+               off_diag = np.ones([edges_array.shape[1], edges_array.shape[2]]) - np.eye(edges_array.shape[1])
                rel_rec = np.array(encode_onehot(np.where(off_diag)[0]), dtype=np.float32)
                rel_send = np.array(encode_onehot(np.where(off_diag)[1]), dtype=np.float32)
                rel_rec = torch.FloatTensor(rel_rec)
                rel_send = torch.FloatTensor(rel_send)
 
-               results = train_and_evaluate_link_prediction_nri(data=x,
-                                                                target=target,
+               # NOTE - we must guarantee that all data have the same number of rows (input size of the MLP) ...
+               input_size = x.shape[0] // 2
+               train_data = x[0:input_size, ]
+               val_data = x[input_size:(input_size * 2), ]
+
+               # create dataloader
+               train_data = train_data.T.view(1, train_data.T.shape[0], train_data.T.shape[1])
+               test_data = val_data.T.view(1, val_data.T.shape[0], val_data.T.shape[1])
+               
+               edges_array_reshape = torch.reshape(edges_array, [-1, edges_array.shape[1] ** 2])
+               tensor_train_data = TensorDataset(train_data, edges_array_reshape)
+               tensor_test_data = TensorDataset(test_data, edges_array_reshape)
+
+               # NOTE - batches are randomly selected for time series ...
+               train_data_loader = DataLoader(tensor_train_data, batch_size=batch_size, shuffle=True, num_workers=8)
+               test_data_loader = DataLoader(tensor_test_data, batch_size=batch_size, shuffle=True, num_workers=8)
+
+               data_loader = {
+
+                    "train": train_data_loader,
+                    "test": test_data_loader
+                              
+                              }
+
+               # NOTE - n_in = number of observations in the paper ...
+               model_wrapper = model_wrapper(n_in=input_size)
+
+               results = train_and_evaluate_link_prediction_nri(data=data_loader,
+                                                                target=edges_array,
                                                                 rel_rec=rel_rec,
                                                                 rel_send=rel_send,
                                                                 model_wrapper=model_wrapper,
-                                                                criterion=criterion,
                                                                 verbose=verbose)
                
           results[file.split(".")[0]] = {
