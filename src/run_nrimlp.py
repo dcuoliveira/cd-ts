@@ -1,7 +1,5 @@
 import os
-import torch
 
-from models.naive import RadomClass
 from training.runners import run_training_procedure
 from models.GNNs import NRIMLPWrapper
 
@@ -9,6 +7,7 @@ from models.GNNs import NRIMLPWrapper
 model_wrapper = NRIMLPWrapper
 verbose = False
 model_name = "nrimlp"
+batch_size = 100
 
 ## dataset path ##
 source_code = os.path.join(os.getcwd(), "src")
@@ -28,6 +27,6 @@ if __name__ == "__main__":
                                       input_path=os.path.join(data_files, "simulations"),
                                       output_path=output_files,
                                       model_wrapper=model_wrapper,
-                                      criterion=None,
+                                      batch_size=batch_size,
                                       model_name=model_name,
                                       verbose=verbose)
