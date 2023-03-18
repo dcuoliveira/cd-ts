@@ -22,7 +22,11 @@ def expand_melted_df(adj):
 
     new_adj = adj.copy()
     for i, row in adj.iterrows():
-        row_to_add = pd.DataFrame([{"index": row["variable"], "variable": str(row["index"]), "value": 1}])
+
+        if row["variable"] == row["index"]:
+            continue
+
+        row_to_add = pd.DataFrame([{"index": row["variable"], "variable": str(row["index"]), "value": row["value"]}])
         new_adj = pd.concat([new_adj, row_to_add], axis=0)
     new_adj = new_adj.reset_index(drop=True)
 
@@ -51,6 +55,25 @@ def kl_categorical_uniform(preds, num_atoms, num_edge_types, add_const=False,
 
 def edge_accuracy(preds, target):
     _, preds = preds.max(-1)
-    correct = preds.float().data.eq(
-        target.float().data.view_as(preds)).cpu().sum()
+    correct = preds.float().data.eq(target.float().data.view_as(preds)).cpu().sum()
     return np.float(correct) / (target.size(0) * target.size(1))
+
+def expand_edges(edges):
+    
+    orig_rows = list(edges.index)
+    orig_cols = list(edges.columns)
+
+    for i in list(orig_rows):
+        edges[i] = 0
+    edges = edges.reindex(sorted(edges.columns), axis=1)
+
+    for j in list(orig_cols):
+        edges.loc[j] = edges[j]
+
+    return edges.fillna(0)
+
+def get_off_diag_idx(num_atoms):
+    return np.ravel_multi_index(
+        np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
+        [num_atoms, num_atoms],
+    )
