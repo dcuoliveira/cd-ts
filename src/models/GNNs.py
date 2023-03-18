@@ -54,7 +54,7 @@ class NRIMLP(torch.nn.Module):
         x_skip = x
 
         if self.factor:
-            x = self.edge2node(x, rel_rec, rel_send)
+            x = self.edge2node(x, rel_rec)
             x = self.mlp3(x)
             x = self.node2edge(x, rel_rec, rel_send)
             x = torch.cat((x, x_skip), dim=2)  # Skip connection
