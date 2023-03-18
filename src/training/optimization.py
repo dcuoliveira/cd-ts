@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 
 from utils.Pyutils import my_softmax, kl_categorical_uniform, edge_accuracy
 
-def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, model_wrapper, verbose):
+def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrapper, verbose):
     
     # get wrapper parameters
     model = model_wrapper.ModelClass
@@ -21,14 +21,14 @@ def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, mode
     train_auc_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: train data", disable=not verbose):
         
-        for batch_idx, (data, relations) in enumerate(data["train"]):    
+        for batch_idx, (inputs, target) in enumerate(data["train"]):    
             model.train()
             optimizer.zero_grad()
-            logits = model.forward(inputs=data, rel_rec=rel_rec, rel_send=rel_send)
+            logits = model.forward(inputs=inputs, rel_rec=rel_rec, rel_send=rel_send)
             prob = my_softmax(logits, -1)
 
             loss = kl_categorical_uniform(preds=prob,
-                                          num_atoms=data.shape[0],
+                                          num_atoms=inputs.shape[1],
                                           num_edge_types=2)
 
             acc = edge_accuracy(preds=logits,
@@ -41,14 +41,14 @@ def train_and_evaluate_link_prediction_nri(data, target, rel_rec, rel_send, mode
     test_auc_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: test data", disable=not verbose):
         
-        for batch_idx, (data, relations) in enumerate(data["test"]):    
+        for batch_idx, (inputs, target) in enumerate(data["test"]):    
             model.train()
             optimizer.zero_grad()
-            logits = model.forward(inputs=data, rel_rec=rel_rec, rel_send=rel_send)
+            logits = model.forward(inputs=inputs, rel_rec=rel_rec, rel_send=rel_send)
             prob = my_softmax(logits, -1)
 
             loss = kl_categorical_uniform(preds=prob,
-                                        num_atoms=data.shape[0],
+                                        num_atoms=inputs.shape[0],
                                         num_edge_types=2)
 
             acc = edge_accuracy(preds=logits,
