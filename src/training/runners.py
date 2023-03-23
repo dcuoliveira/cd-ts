@@ -129,15 +129,6 @@ def run_training_procedure(files,
                                                                 rel_send=rel_send,
                                                                 model_wrapper=model_wrapper,
                                                                 verbose=verbose)
-               
-          results[file.split(".")[0]] = {
-               
-               "best_params": best_params,
-               "train_loss_values": train_loss_values,
-               "val_auc_values": val_auc_values,
-               "test_auc": test_auc
-               
-               }
 
           save_pkl(data=results, path=os.path.join(output_path,  "{}_results.pickle".format(file.split(".")[-2])))
 
