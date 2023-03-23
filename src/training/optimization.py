@@ -19,6 +19,7 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
 
     train_auc_values = []
+    train_loss_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: train data", disable=not verbose):
         
         for batch_idx, (inputs, target) in enumerate(data["train"]):    
@@ -30,6 +31,7 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
             loss = kl_categorical_uniform(preds=prob,
                                           num_atoms=inputs.shape[1],
                                           num_edge_types=2)
+            train_loss_values.append(loss)
 
             acc = edge_accuracy(preds=logits,
                                 target=target)
@@ -39,6 +41,7 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
             optimizer.step()
     
     test_auc_values = []
+    test_loss_values = []
     for epoch in tqdm(range(n_epochs), total=n_epochs + 1, desc="Running backpropagation: test data", disable=not verbose):
         
         for batch_idx, (inputs, target) in enumerate(data["test"]):    
@@ -50,6 +53,7 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
             loss = kl_categorical_uniform(preds=prob,
                                         num_atoms=inputs.shape[0],
                                         num_edge_types=2)
+            test_loss_values.append(loss)
 
             acc = edge_accuracy(preds=logits,
                                 target=target)
@@ -58,6 +62,9 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
             loss.backward()
             optimizer.step()
 
+    results = {
+        "train": {"auc": train_auc_values, "loss": train_loss_values},
+        "test": {"auc": test_auc_values, "loss": test_loss_values}
+               }
 
-
-    return None
+    return results
