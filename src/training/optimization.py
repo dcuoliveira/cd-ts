@@ -27,10 +27,17 @@ def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrappe
             optimizer.zero_grad()
             logits = model.forward(inputs=inputs, rel_rec=rel_rec, rel_send=rel_send)
             prob = my_softmax(logits, -1)
+            # TODO
+            # Gumbel-Softmax sampling
+            # edges = sample_gumbel(logits, temperature=0.5)
+            # Decoding step
+            # output = decoder(inputs, edges, rel_rec=rel_rec, rel_send=rel_send)
+            # decode_target = inputs[:,:,1:], take T-1 last values
 
             loss = kl_categorical_uniform(preds=prob,
                                           num_atoms=inputs.shape[1],
                                           num_edge_types=2)
+            # loss += nll_likelihood(output, decode_target, var=5e-4)
             train_loss_values.append(loss)
 
             acc = edge_accuracy(preds=logits,
