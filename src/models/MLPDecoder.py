@@ -3,20 +3,19 @@ import torch
 from torch import nn
 import numpy as np
 
-from MLP import MLP
+from models.MLP import MLP
 
 class MLPDecoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_edges):
+    def __init__(self, input_dim, hidden_dim, num_edges):
         super(MLPDecoder, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
         self.num_edges = num_edges
 
         self.nets = nn.ModuleList([
             MLP(2*self.input_dim, self.hidden_dim, self.hidden_dim) for i in range(self.num_edges)]
         )
-        self.out_fc = nn.Linear(self.hidden_dim, self.output_dim)
+        self.out_fc = nn.Linear(self.hidden_dim, self.input_dim)
 
     def forward(self, x, edges, rel_rec, rel_send):
         B, T, N, D = x.size()

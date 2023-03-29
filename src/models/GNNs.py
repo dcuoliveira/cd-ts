@@ -46,9 +46,7 @@ class NRIMLP(torch.nn.Module):
             # New shape: [num_sims, num_atoms, num_timesteps*num_dims]
         else:
             x = inputs.view(1, inputs.shape[0], inputs.shape[1])
-
         x = self.mlp1(x)  # 2-layer ELU net per node
-
         x = self.node2edge(x, rel_rec, rel_send)
         x = self.mlp2(x)
         x_skip = x
