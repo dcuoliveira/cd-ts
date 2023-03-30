@@ -18,10 +18,9 @@ class MLPDecoder(nn.Module):
         self.out_fc = nn.Linear(self.hidden_dim, self.input_dim)
 
     def forward(self, x, edges, rel_rec, rel_send):
+        x = x.transpose(1, 2)
         B, T, N, D = x.size()
-
         predictions = torch.zeros(B,T-1,N,D)
-        
         for t in range(1,T):
 
             current_x = x[:,t-1,:,:]
@@ -39,6 +38,7 @@ class MLPDecoder(nn.Module):
             aggr_hid = torch.matmul(rel_rec.t(), all_msg)
             # prediction: x_j = f(\sum_{i\=j}h_ij) + x_j,t-1
             predictions[:,t-1,:,:] = self.out_fc(aggr_hid) + x[:,t-1,:,:]
+        predictions = predictions.transpose(1, 2)
         return predictions
 
 if __name__ == '__main__':

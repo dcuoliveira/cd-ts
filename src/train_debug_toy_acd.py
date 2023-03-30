@@ -26,22 +26,21 @@ rel_send = torch.FloatTensor(rel_send).to(device)
 encoder = NRIMLP(50*4, 128, 2)
 decoder = MLPDecoder(4, 128, 2)
 ## Optimizers
-optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=7e-4)
+optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=1e-3)
 ## Train
 encoder.train()
 decoder.train()
-for i in range(100):
+for i in range(1000):
     print("Epoch:", i)
-    pbar = tqdm((train_loader), total=len(train_loader))
-    for i, (features, edges) in pbar:
-        
+    pbar = tqdm(enumerate(train_loader), total=len(train_loader))
+    for i, (features, gt_edges) in pbar:
+        B = features.shape[0]
         optimizer.zero_grad()
         features = features.to(device)
-        edges = edges.to(device)
+        gt_edges = gt_edges.to(device)
         logits = encoder.forward(features, rel_rec=rel_rec, rel_send=rel_send)
         prob = my_softmax(logits, -1)
         
-                # TODO
         # Gumbel-Softmax sampling
         edges = sample_gumbel(logits, temperature=0.5)
         # Decoding step
@@ -51,7 +50,13 @@ for i in range(100):
         loss = kl_categorical_uniform(preds=prob,
                                         num_atoms=features.shape[1],
                                         num_edge_types=2)
-        #loss += nll_likelihood(output, decode_target, var=5e-4)
+        distrib = torch.distributions.Normal(output, 1e-3)
+        loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
         optimizer.step()
+        if (i+1)% 5 == 0:
+            edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*6)
+            pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}".format(loss.item(), edge_acc))
+
+        
 

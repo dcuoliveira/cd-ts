@@ -10,6 +10,11 @@ from sklearn.model_selection import train_test_split
 
 from utils.Pyutils import my_softmax, kl_categorical_uniform, edge_accuracy
 
+def sample_gumbel(logits, temperature=1.0):
+    gumbel_noise = -torch.log(1e-10 - torch.log(torch.rand_like(logits) + 1e-10))
+    y = logits + gumbel_noise
+    return torch.softmax(y / temperature, axis=-1)
+
 def train_and_evaluate_link_prediction_nri(data, rel_rec, rel_send, model_wrapper, verbose):
     
     # get wrapper parameters
