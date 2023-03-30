@@ -13,37 +13,38 @@ class MLPDecoder(nn.Module):
         self.num_edges = num_edges
 
         self.nets = nn.ModuleList([
-            MLP(2*self.input_dim, self.hidden_dim, self.hidden_dim) for i in range(self.num_edges)]
+            MLP(2*self.input_dim, self.hidden_dim, self.hidden_dim, use_batch_norm=False, final_layer=True) for _ in range(self.num_edges)]
         )
-        self.out_fc = nn.Linear(self.hidden_dim, self.input_dim)
+        self.out_fc = MLP(self.hidden_dim + self.input_dim, self.hidden_dim, self.input_dim, use_batch_norm=False, final_layer=True)
 
-    def forward(self, x, edges, rel_rec, rel_send):
+    def forward(self, x, edges, rel_rec, rel_send, teacher_forcing=10):
         x = x.transpose(1, 2)
         B, T, N, D = x.size()
-        predictions = torch.zeros(B,T-1,N,D)
-        for t in range(1,T):
-
-            current_x = x[:,t-1,:,:]
-            receivers = torch.matmul(rel_rec, current_x)
-            senders = torch.matmul(rel_send, current_x)
+        predictions = torch.zeros(B,T,N,D)
+        last_x = x[:,::teacher_forcing,:,:]
+        for t in range(teacher_forcing):
+            receivers = torch.matmul(rel_rec, last_x)
+            senders = torch.matmul(rel_send, last_x)
             input = torch.cat([senders, receivers], dim=-1)
             all_msg = torch.zeros(
-                input.size(0), input.size(1), self.hidden_dim
+                input.size(0), input.size(1), input.size(2), self.hidden_dim
             )
             # h_ij = f(x_i, x_j)
             for i in range(1,self.num_edges):   
                 msg = self.nets[i](input)
-                all_msg += msg*edges[:,:,i,None]
+                all_msg += msg*edges[:,None,:,i,None]
             # aggregation: \sum_{i\=j}h_ij
-            aggr_hid = torch.matmul(rel_rec.t(), all_msg)
+            aggr_hid = torch.matmul(rel_rec.transpose(-2,-1), all_msg)
             # prediction: x_j = f(\sum_{i\=j}h_ij) + x_j,t-1
-            predictions[:,t-1,:,:] = self.out_fc(aggr_hid) + x[:,t-1,:,:]
-        predictions = predictions.transpose(1, 2)
+            aggr_in = torch.cat([aggr_hid, last_x], dim=-1)
+            last_x = self.out_fc(aggr_in) + last_x
+            predictions[:,t::teacher_forcing,:,:] = last_x
+        predictions = predictions.transpose(1, 2)[:,:,:-1,:]
         return predictions
 
 if __name__ == '__main__':
 
-    x = torch.randn(4, 20, 5, 2)
+    x = torch.randn(4, 5, 20, 2)
 
     print(x.shape)
 
@@ -69,6 +70,6 @@ if __name__ == '__main__':
 
     rel_rec, rel_send = create_rel_rec_send(5)
     edges = torch.zeros(4,5*4,3)
-    net = MLPDecoder(2,8,2,3)
+    net = MLPDecoder(2,8,3)
 
     print(net(x, edges, rel_rec, rel_send).shape)

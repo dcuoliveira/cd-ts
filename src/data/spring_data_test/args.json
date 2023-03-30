@@ -1,7 +1,7 @@
 {
     "simulation": "springs",
     "state_type": "indep",
-    "num_train": 1000,
+    "num_train": 10000,
     "num_valid": 1,
     "num_test": 100,
     "length": 5100,

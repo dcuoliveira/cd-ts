@@ -2,6 +2,7 @@ from itertools import chain
 import numpy as np
 import torch
 from tqdm import tqdm
+from torch.nn import functional as F
 
 from data_loaders import load_springs_data
 from models.GNNs import NRIMLP
@@ -15,8 +16,8 @@ def sample_gumbel(logits, temperature=1.0):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ## Load data
-train_dataset = load_springs_data("src/data/spring_data_test", "_springs3_l5100_s1000", num_atoms=3)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
+train_dataset = load_springs_data("src/data/spring_data_test_2", "_springs3_l5100_s10000", num_atoms=3)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
 off_diag = np.ones((3, 3)) - np.eye(3)
 rel_rec = np.array(encode_onehot(np.where(off_diag)[0]), dtype=np.float32)
 rel_send = np.array(encode_onehot(np.where(off_diag)[1]), dtype=np.float32)
@@ -26,11 +27,11 @@ rel_send = torch.FloatTensor(rel_send).to(device)
 encoder = NRIMLP(50*4, 128, 2)
 decoder = MLPDecoder(4, 128, 2)
 ## Optimizers
-optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=1e-3)
+optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=5e-4)
 ## Train
 encoder.train()
 decoder.train()
-for i in range(1000):
+for i in range(5000):
     print("Epoch:", i)
     pbar = tqdm(enumerate(train_loader), total=len(train_loader))
     for i, (features, gt_edges) in pbar:
@@ -44,19 +45,19 @@ for i in range(1000):
         # Gumbel-Softmax sampling
         edges = sample_gumbel(logits, temperature=0.5)
         # Decoding step
-        output = decoder(features, edges, rel_rec=rel_rec, rel_send=rel_send)
+        output = decoder(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=5)
         decode_target = features[:,:,1:]
 
         loss = kl_categorical_uniform(preds=prob,
                                         num_atoms=features.shape[1],
                                         num_edge_types=2)
-        distrib = torch.distributions.Normal(output, 1e-3)
+        distrib = torch.distributions.Normal(output, 5e-5)
+        loss = F.binary_cross_entropy(prob[:,:,-1], gt_edges.float()).sum()*1e10/B
         loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
         optimizer.step()
-        if (i+1)% 5 == 0:
-            edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*6)
-            pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}".format(loss.item(), edge_acc))
+        edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*6)
+        pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}, MSE: {:4e}".format(loss.item(), edge_acc, F.mse_loss(output, decode_target).item()))
 
         
 

@@ -47,7 +47,7 @@ def my_softmax(input, axis=1):
 
 def kl_categorical_uniform(preds, num_atoms, num_edge_types, add_const=False,
                            eps=1e-16):
-    kl_div = preds * torch.log(preds + eps)
+    kl_div = preds * (torch.log(preds + eps) - np.log(1/num_edge_types + eps))
     if add_const:
         const = np.log(num_edge_types)
         kl_div += const
