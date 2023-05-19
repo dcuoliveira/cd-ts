@@ -15,10 +15,11 @@ def sample_gumbel(logits, temperature=1.0):
     return torch.softmax(y / temperature, axis=-1)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+num_atoms = 3
 ## Load data
-train_dataset = load_springs_data("src/data/spring_data_test_2", "_springs3_l5100_s10000", num_atoms=3)
+train_dataset = load_springs_data("src/data/spring_data_test", "_springs{}_l5100_s10000".format(num_atoms), num_atoms=num_atoms)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
-off_diag = np.ones((3, 3)) - np.eye(3)
+off_diag = np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)
 rel_rec = np.array(encode_onehot(np.where(off_diag)[0]), dtype=np.float32)
 rel_send = np.array(encode_onehot(np.where(off_diag)[1]), dtype=np.float32)
 rel_rec = torch.FloatTensor(rel_rec).to(device)
@@ -45,14 +46,13 @@ for i in range(5000):
         # Gumbel-Softmax sampling
         edges = sample_gumbel(logits, temperature=0.5)
         # Decoding step
-        output = decoder(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=5)
+        output = decoder(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=10)
         decode_target = features[:,:,1:]
 
         loss = kl_categorical_uniform(preds=prob,
                                         num_atoms=features.shape[1],
                                         num_edge_types=2)
         distrib = torch.distributions.Normal(output, 5e-5)
-        loss = F.binary_cross_entropy(prob[:,:,-1], gt_edges.float()).sum()*1e10/B
         loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
         optimizer.step()
