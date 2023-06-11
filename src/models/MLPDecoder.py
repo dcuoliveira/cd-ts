@@ -20,8 +20,10 @@ class MLPDecoder(nn.Module):
     def forward(self, x, edges, rel_rec, rel_send, teacher_forcing=10):
         x = x.transpose(1, 2)
         B, T, N, D = x.size()
-        predictions = torch.zeros(B,T,N,D)
-        last_x = x[:,::teacher_forcing,:,:]
+        predictions = torch.zeros(B, T, N, D)
+        # only take n-th timesteps as starting points (n: teacher_forcing)
+        last_x = x[:, 0::teacher_forcing, :, :]
+
         for t in range(teacher_forcing):
             receivers = torch.matmul(rel_rec, last_x)
             senders = torch.matmul(rel_send, last_x)
@@ -29,17 +31,21 @@ class MLPDecoder(nn.Module):
             all_msg = torch.zeros(
                 input.size(0), input.size(1), input.size(2), self.hidden_dim
             )
-            # h_ij = f(x_i, x_j)
-            for i in range(1,self.num_edges):   
+
+            # h_{ij, t} = \sum_{e>0} z_{ij, e} * f_e(x_{i, t}, x_{j, t})
+            for i in range(1, self.num_edges):   
                 msg = self.nets[i](input)
-                all_msg += msg*edges[:,None,:,i,None]
-            # aggregation: \sum_{i\=j}h_ij
-            aggr_hid = torch.matmul(rel_rec.transpose(-2,-1), all_msg)
-            # prediction: x_j = f(\sum_{i\=j}h_ij) + x_j,t-1
-            aggr_in = torch.cat([aggr_hid, last_x], dim=-1)
-            last_x = self.out_fc(aggr_in) + last_x
-            predictions[:,t::teacher_forcing,:,:] = last_x
-        predictions = predictions.transpose(1, 2)[:,:,:-1,:]
+                all_msg += edges[:, None, :, i, None] * msg
+            
+            # aggregation: f_v([\sum_{i \= j} h_ij, x_j])
+            aggr_hid = torch.matmul(rel_rec.t(), all_msg)
+            
+            # prediction: x_{j, t+1} = x_{j, t} + f_v([\sum_{i \= j} h_{ij, t}, x_{j, t}])
+            aggr_in = torch.cat([aggr_hid, last_x], dim=3)
+            last_x = last_x + self.out_fc(aggr_in)
+            predictions[:, t::teacher_forcing, :, :] = last_x
+        
+        predictions = predictions.transpose(1, 2)[:, :, :-1, :]
         return predictions
 
 if __name__ == '__main__':
@@ -58,7 +64,7 @@ if __name__ == '__main__':
             
     def create_rel_rec_send(num_atoms):
         """Based on https://github.com/ethanfetaya/NRI (MIT License)."""
-        # Generate off-diagonal interaction graph
+        # Generate off-diagonal interactio  n graph
         off_diag = np.ones([num_atoms, num_atoms]) - np.eye(num_atoms)
 
         rel_rec = np.array(encode_onehot(np.where(off_diag)[0]), dtype=np.float32)
