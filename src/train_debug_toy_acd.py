@@ -65,12 +65,12 @@ for i in range(5000):
         edges = sample_gumbel(logits, tau=0.5)
 
         # decoding step
-        output = decoder(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=10)
-        decode_target = features[:,:,1:]
+        output = decoder.forward(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=10)
+        decode_target = features[:, :, 1:]
 
         loss = kl_categorical_uniform(preds=prob,
-                                        num_atoms=features.shape[1],
-                                        num_edge_types=2)
+                                      num_atoms=features.shape[1],
+                                      num_edge_types=2)
         distrib = torch.distributions.Normal(output, 5e-5)
         loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
