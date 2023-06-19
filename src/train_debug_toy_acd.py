@@ -36,16 +36,16 @@ rel_rec = torch.FloatTensor(rel_rec).to(device)
 rel_send = torch.FloatTensor(rel_send).to(device)
 
 # load Models
-encoder = MLPEncoder(49*4, 128, 2).to(device)
-decoder = MLPDecoder(4, 128, 2).to(device)
+encoder = MLPEncoder(49*4, 256, 2).to(device)
+decoder = MLPDecoder(4, 256, 2).to(device)
 
 # optimizers
 optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=5e-4)
-
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, gamma=0.5)
 # train
 encoder.train()
 decoder.train()
-for i in range(5000):
+for i in range(500):
     print("Epoch:", i)
     pbar = tqdm(enumerate(train_loader), total=len(train_loader))
     for i, (features, gt_edges) in pbar:
@@ -65,18 +65,18 @@ for i in range(5000):
         edges = sample_gumbel(logits, tau=0.5)
 
         # decoding step
-        output = decoder.forward(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=1)
+        output = decoder.forward(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=10)
         decode_target = features[:, :, 1:]
 
         loss = kl_categorical_uniform(preds=prob,
                                       num_atoms=num_atoms,
                                       num_edge_types=2)
-        distrib = torch.distributions.Normal(output, 5e-5)
+        distrib = torch.distributions.Normal(output, 5e-7)
         loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
         optimizer.step()
         edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*num_atoms*(num_atoms-1))
         pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}, MSE: {:4e}".format(loss.item(), edge_acc, F.mse_loss(output, decode_target).item()))
-
+    scheduler.step()
         
 

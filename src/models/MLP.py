@@ -1,10 +1,11 @@
 import torch
 import torch.nn.functional as F
+from torch import nn
 
 class MLP(torch.nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob=0., use_batch_norm=True, final_layer=False):
+    def __init__(self, n_in, n_hid, n_out, do_prob=0., use_batch_norm=True, final_layer=False, activation='elu', initialise_weights=True):
         super(MLP, self).__init__()
         self.fc1 = torch.nn.Linear(n_in, n_hid)
         self.bn = torch.nn.BatchNorm1d(n_out)
@@ -16,8 +17,12 @@ class MLP(torch.nn.Module):
             self.final = torch.nn.Linear(n_hid, n_out)
         else:
             self.fc2 = torch.nn.Linear(n_hid, n_out)
-
-        self.init_weights()
+        if activation=='relu':
+            self.activation = nn.ReLU()
+        else:
+            self.activation = nn.ELU()
+        if initialise_weights:
+            self.init_weights()
 
     def init_weights(self):
         for m in self.modules():
@@ -35,9 +40,9 @@ class MLP(torch.nn.Module):
 
     def forward(self, inputs):
         # Input shape: [num_sims, num_things, num_features]
-        x = F.elu(self.fc1(inputs))
+        x = self.activation(self.fc1(inputs))
         x = F.dropout(x, self.dropout_prob, training=self.training)
-        x = F.elu(self.fc2(x))
+        x = self.activation(self.fc2(x))
         if self.final_layer:
             x = self.final(x)
         if self.use_batch_norm:

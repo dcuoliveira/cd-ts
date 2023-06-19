@@ -13,17 +13,18 @@ class MLPDecoder(nn.Module):
         self.num_edges = num_edges
 
         self.nets = nn.ModuleList([
-            MLP(2*self.input_dim, self.hidden_dim, self.hidden_dim, use_batch_norm=False, final_layer=True) for _ in range(self.num_edges)]
+            MLP(2*self.input_dim, self.hidden_dim, self.hidden_dim, use_batch_norm=False, 
+                final_layer=False, activation='relu', initialise_weights=False) for _ in range(self.num_edges)]
         )
-        self.out_fc = MLP(self.hidden_dim + self.input_dim, self.hidden_dim, self.input_dim, use_batch_norm=False, final_layer=True)
+        self.out_fc = MLP(self.hidden_dim + self.input_dim, self.hidden_dim, self.input_dim, 
+                          use_batch_norm=False, final_layer=True, activation='relu', initialise_weights=False)
 
     def forward(self, x, edges, rel_rec, rel_send, teacher_forcing=10):
         x = x.transpose(1, 2)
         B, T, N, D = x.size()
-        predictions = torch.zeros(B, T, N, D).to(x.device)
         # only take n-th timesteps as starting points (n: teacher_forcing)
         last_x = x[:, 0::teacher_forcing, :, :]
-
+        predictions = torch.zeros(B, last_x.size(1)*teacher_forcing, N, D).to(x.device)
         for t in range(teacher_forcing):
             receivers = torch.matmul(rel_rec, last_x)
             senders = torch.matmul(rel_send, last_x)
@@ -45,7 +46,7 @@ class MLPDecoder(nn.Module):
             last_x = last_x + self.out_fc(aggr_in)
             predictions[:, t::teacher_forcing, :, :] = last_x
         
-        predictions = predictions.transpose(1, 2)[:, :, :-1, :]
+        predictions = predictions.transpose(1, 2)[:, :, :(x.size(1)-1), :]
         return predictions
 
 if __name__ == '__main__':
