@@ -20,7 +20,7 @@ class MLPDecoder(nn.Module):
     def forward(self, x, edges, rel_rec, rel_send, teacher_forcing=10):
         x = x.transpose(1, 2)
         B, T, N, D = x.size()
-        predictions = torch.zeros(B, T, N, D)
+        predictions = torch.zeros(B, T, N, D).to(x.device)
         # only take n-th timesteps as starting points (n: teacher_forcing)
         last_x = x[:, 0::teacher_forcing, :, :]
 
@@ -30,7 +30,7 @@ class MLPDecoder(nn.Module):
             input = torch.cat([senders, receivers], dim=-1)
             all_msg = torch.zeros(
                 input.size(0), input.size(1), input.size(2), self.hidden_dim
-            )
+            ).to(x.device)
 
             # h_{ij, t} = \sum_{e>0} z_{ij, e} * f_e(x_{i, t}, x_{j, t})
             for i in range(1, self.num_edges):   

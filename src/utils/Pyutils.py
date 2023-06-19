@@ -56,7 +56,7 @@ def kl_categorical_uniform(preds, num_atoms, num_edge_types, add_const=False,
 def edge_accuracy(preds, target):
     _, preds = preds.max(-1)
     correct = preds.float().data.eq(target.float().data.view_as(preds)).cpu().sum()
-    return np.float(correct) / (target.size(0) * target.size(1))
+    return correct / (target.size(0) * target.size(1))
 
 def expand_edges(edges):
     
@@ -77,3 +77,11 @@ def get_off_diag_idx(num_atoms):
         np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
         [num_atoms, num_atoms],
     )
+
+def nll_gaussian(preds, target, variance, add_const=False):
+    """Based on https://github.com/ethanfetaya/NRI (MIT License)."""
+    neg_log_p = (preds - target) ** 2 / (2 * variance)
+    if add_const:
+        const = 0.5 * np.log(2 * np.pi * variance)
+        neg_log_p += const
+    return neg_log_p.sum() / (target.size(0) * target.size(1))

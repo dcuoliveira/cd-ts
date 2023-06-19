@@ -17,9 +17,9 @@ def sample_gumbel(logits, tau=1.0):
 
 # running parameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-num_atoms = 3
+num_atoms = 5
 dataset_name = "spring_data_test"
-file_name = "_springs{}_l5100_s1000".format(num_atoms) # NOTE: changed to 1000 instead of 10000 (missing edges file for 10000)
+file_name = "_springs{}".format(num_atoms) # NOTE: changed to 1000 instead of 10000 (missing edges file for 10000)
 root_path = os.path.dirname(__file__)
 data_path = os.path.join(root_path, "data")
 
@@ -36,8 +36,8 @@ rel_rec = torch.FloatTensor(rel_rec).to(device)
 rel_send = torch.FloatTensor(rel_send).to(device)
 
 # load Models
-encoder = MLPEncoder(50*4, 128, 2)
-decoder = MLPDecoder(4, 128, 2)
+encoder = MLPEncoder(49*4, 128, 2).to(device)
+decoder = MLPDecoder(4, 128, 2).to(device)
 
 # optimizers
 optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=5e-4)
@@ -65,17 +65,17 @@ for i in range(5000):
         edges = sample_gumbel(logits, tau=0.5)
 
         # decoding step
-        output = decoder.forward(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=10)
+        output = decoder.forward(features, edges, rel_rec=rel_rec, rel_send=rel_send, teacher_forcing=1)
         decode_target = features[:, :, 1:]
 
         loss = kl_categorical_uniform(preds=prob,
-                                      num_atoms=features.shape[1],
+                                      num_atoms=num_atoms,
                                       num_edge_types=2)
         distrib = torch.distributions.Normal(output, 5e-5)
         loss -= distrib.log_prob(decode_target).sum()/B
         loss.backward()
         optimizer.step()
-        edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*6)
+        edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*num_atoms*(num_atoms-1))
         pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}, MSE: {:4e}".format(loss.item(), edge_acc, F.mse_loss(output, decode_target).item()))
 
         
