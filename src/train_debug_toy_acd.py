@@ -8,7 +8,7 @@ from torch.nn import functional as F
 from data_loaders import load_springs_data
 from models.MLPEncoder import MLPEncoder
 from models.MLPDecoder import MLPDecoder
-from utils.Pyutils import my_softmax, kl_categorical_uniform, edge_accuracy, encode_onehot, expand_edges, get_off_diag_idx
+from utils.Pyutils import my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device
 
 def sample_gumbel(logits, tau=1.0):
     gumbel_noise = -torch.log(1e-10 - torch.log(torch.rand_like(logits) + 1e-10))
@@ -16,12 +16,7 @@ def sample_gumbel(logits, tau=1.0):
     return torch.softmax(y / tau, axis=-1)
 
 # running parameters
-if torch.cuda.is_available():
-    device_name = "cuda"
-elif torch.backends.mps.is_available():
-    device_name = "mps"
-else:
-    device_name = "cpu"
+device_name = find_gpu_device()
 device = torch.device(device_name)
 num_atoms = 5
 dataset_name = "spring_data_test"
