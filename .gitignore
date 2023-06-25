@@ -5,7 +5,7 @@
 cd-ts.Rproj
 .RData
 .Rhistory
-
+*.npy
 src/debugs/fit_lasso_var.nb.html
 
 src/debugs/.ipynb_checkpoints
