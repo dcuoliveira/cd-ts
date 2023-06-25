@@ -16,8 +16,7 @@ def sample_gumbel(logits, tau=1.0):
     return torch.softmax(y / tau, axis=-1)
 
 # running parameters
-device_name = find_gpu_device()
-device = torch.device(device_name)
+device = torch.device(find_gpu_device())
 num_atoms = 5
 dataset_name = "spring_data_test"
 file_name = "_springs{}".format(num_atoms) # NOTE: changed to 1000 instead of 10000 (missing edges file for 10000)
