@@ -10,6 +10,7 @@ dependencies:
   - r-BigVAR
   - r-data.table
   - r-reticulate
+  - mkl < 2022
   - python=3.10.0
   - pandas
   - numpy
