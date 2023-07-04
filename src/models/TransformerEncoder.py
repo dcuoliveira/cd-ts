@@ -68,7 +68,6 @@ class TransformerEncoder(nn.Module):
 
     def __init__(self, 
         input_size: int,
-        batch_first: bool,
         dim_val: int=512,  
         n_encoder_layers: int=4,
         n_heads: int=8,
@@ -91,10 +90,6 @@ class TransformerEncoder(nn.Module):
             dim_feedforward_encoder: int, number of neurons in the linear layer 
                                      of the encoder
             num_predicted_features: int, the number of features you want to predict.
-                                    Most of the time, this will be 1 because we're
-                                    only forecasting FCR-N prices in DK2, but in
-                                    we wanted to also predict FCR-D with the same
-                                    model, num_predicted_features should be 2.
         """
 
         super().__init__() 
@@ -123,7 +118,6 @@ class TransformerEncoder(nn.Module):
             nhead=n_heads,
             dim_feedforward=dim_feedforward_encoder,
             dropout=dropout_encoder,
-            batch_first=batch_first
             )
 
         # Stack the encoder layers in nn.TransformerDecoder
