@@ -68,7 +68,6 @@ class TransformerEncoder(nn.Module):
 
     def __init__(self, 
         input_size: int,
-        dec_seq_len: int,
         batch_first: bool,
         dim_val: int=512,  
         n_encoder_layers: int=4,
@@ -83,7 +82,6 @@ class TransformerEncoder(nn.Module):
         Args:
 
             input_size: int, number of input variables. 1 if univariate.
-            dec_seq_len: int, the length of the input sequence fed to the decoder
             dim_val: int, aka d_model. All sub-layers in the model produce 
                      outputs of dimension dim_val
             n_encoder_layers: int, number of stacked encoder layers in the encoder
@@ -100,8 +98,6 @@ class TransformerEncoder(nn.Module):
         """
 
         super().__init__() 
-
-        self.dec_seq_len = dec_seq_len
 
         # Creating the three linear layers needed for the model
         self.encoder_input_layer = nn.Linear(
