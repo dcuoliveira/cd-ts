@@ -6,10 +6,15 @@ import time
 import numpy as np
 import argparse
 
-from synthetic_sim import SpringSim
+# sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
+
+from data.synthetic_sim import SpringSim
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--train_only", type=bool, default=True, help="If to generate train data only."
+    )
     parser.add_argument(
         "--simulation", type=str, default="springs", help="What simulation to generate."
     )
@@ -201,32 +206,6 @@ if __name__ == "__main__":
 
     print(suffix)
 
-    np.random.seed(args.seed)
-
-    print("Generating {} training simulations".format(args.num_train))
-    loc_train, vel_train, edges_train = generate_dataset(
-        args.num_train,
-        args.length,
-        args.sample_freq,
-        sampled_sims=(None),
-    )
-
-    print("Generating {} validation simulations".format(args.num_valid))
-    loc_valid, vel_valid, edges_valid = generate_dataset(
-        args.num_valid,
-        args.length,
-        args.sample_freq,
-        sampled_sims=(None),
-    )
-
-    print("Generating {} test simulations".format(args.num_test))
-    loc_test, vel_test, edges_test = generate_dataset(
-        args.num_test,
-        args.length_test,
-        args.sample_freq,
-        sampled_sims=(None),
-    )
-
     # check if data path exists
     if not os.path.exists(args.datadir):
         os.makedirs(args.datadir)
@@ -242,14 +221,51 @@ if __name__ == "__main__":
         indent=4,
         separators=(",", ": "),
     )
-    np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
-    np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
-    np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train)
 
-    np.save(os.path.join(args.datadir, "loc_valid" + suffix + ".npy"), loc_valid)
-    np.save(os.path.join(args.datadir, "vel_valid" + suffix + ".npy"), vel_valid)
-    np.save(os.path.join(args.datadir, "edges_valid" + suffix + ".npy"), edges_valid)
+    np.random.seed(args.seed)
 
-    np.save(os.path.join(args.datadir, "loc_test" + suffix + ".npy"), loc_test)
-    np.save(os.path.join(args.datadir, "vel_test" + suffix + ".npy"), vel_test)
-    np.save(os.path.join(args.datadir, "edges_test" + suffix + ".npy"), edges_test)
+    if args.train_only:
+        print("Generating {} training simulations".format(args.num_train))
+        loc_train, vel_train, edges_train = generate_dataset(
+            args.num_train,
+            args.length,
+            args.sample_freq,
+            sampled_sims=(None),
+        )
+        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
+        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
+        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train)
+
+    else:
+        print("Generating {} training simulations".format(args.num_train))
+        loc_train, vel_train, edges_train = generate_dataset(
+            args.num_train,
+            args.length,
+            args.sample_freq,
+            sampled_sims=(None),
+        )
+        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
+        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
+        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train)
+        
+        print("Generating {} validation simulations".format(args.num_valid))
+        loc_valid, vel_valid, edges_valid = generate_dataset(
+            args.num_valid,
+            args.length,
+            args.sample_freq,
+            sampled_sims=(None),
+        )
+        np.save(os.path.join(args.datadir, "loc_valid" + suffix + ".npy"), loc_valid)
+        np.save(os.path.join(args.datadir, "vel_valid" + suffix + ".npy"), vel_valid)
+        np.save(os.path.join(args.datadir, "edges_valid" + suffix + ".npy"), edges_valid)
+
+        print("Generating {} test simulations".format(args.num_test))
+        loc_test, vel_test, edges_test = generate_dataset(
+            args.num_test,
+            args.length_test,
+            args.sample_freq,
+            sampled_sims=(None),
+        )
+        np.save(os.path.join(args.datadir, "loc_test" + suffix + ".npy"), loc_test)
+        np.save(os.path.join(args.datadir, "vel_test" + suffix + ".npy"), vel_test)
+        np.save(os.path.join(args.datadir, "edges_test" + suffix + ".npy"), edges_test)
