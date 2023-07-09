@@ -18,7 +18,7 @@ def sample_gumbel(logits, tau=1.0):
 # running parameters
 device = torch.device(find_gpu_device())
 num_atoms = 5
-dataset_name = "spring_data_test"
+dataset_name = "springs"
 file_name = "_springs{}".format(num_atoms) # NOTE: changed to 1000 instead of 10000 (missing edges file for 10000)
 root_path = os.path.dirname(__file__)
 data_path = os.path.join(root_path, "data")
