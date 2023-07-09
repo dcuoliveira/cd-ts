@@ -235,6 +235,7 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(args.datadir, args.simulation)):
         os.makedirs(os.path.join(args.datadir, args.simulation))
 
+    args.datadir = os.path.join(args.datadir, args.simulation)
     json.dump(
         vars(args),
         open(os.path.join(args.datadir, "args.json"), "w"),
