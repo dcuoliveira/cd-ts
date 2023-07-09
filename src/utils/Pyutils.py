@@ -4,6 +4,11 @@ import numpy as np
 import torch.nn.functional as F
 import torch
 
+def sample_gumbel(logits, tau=1.0):
+    gumbel_noise = -torch.log(1e-10 - torch.log(torch.rand_like(logits) + 1e-10))
+    y = logits + gumbel_noise
+    return torch.softmax(y / tau, axis=-1)
+
 def find_gpu_device():
     if torch.cuda.is_available():
         device_name = "cuda"
