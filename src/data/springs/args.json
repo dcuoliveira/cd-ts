@@ -1,0 +1,20 @@
+{
+    "train_only": true,
+    "simulation": "springs",
+    "num_train": 50000,
+    "num_valid": 10000,
+    "num_test": 10000,
+    "length": 5000,
+    "sample_freq": 100,
+    "n_balls": 5,
+    "seed": 42,
+    "datadir": "/Users/danieloliveira/Documents/Daniel/codes/cd-ts/src/data/springs",
+    "temperature": 0.1,
+    "undirected": false,
+    "fixed_particle": false,
+    "influencer_particle": false,
+    "confounder": false,
+    "uninfluenced_particle": false,
+    "fixed_connectivity": false,
+    "length_test": 10000
+}
