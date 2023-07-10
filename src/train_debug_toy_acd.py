@@ -13,13 +13,13 @@ from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, enc
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--num_atoms", type=bool, default=True, help="If to generate train data only."
+    "--num_atoms", type=int, default=5, help="Number of variables to consider.."
 )
 parser.add_argument(
     "--simulation", type=str, default="springs", help="What simulation to generate."
 )
 parser.add_argument(
-    "--n_epochs", type=int, default=500, help="What simulation to generate."
+    "--n_epochs", type=int, default=500, help="Number of epochs to use.."
 )
 
 if __name__ == "__main__":
