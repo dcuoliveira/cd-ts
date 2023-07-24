@@ -36,8 +36,9 @@ class MLPEncoder(torch.nn.Module):
 
     def node2edge(self, x, rel_rec, rel_send):
         # filter the hidden representation of each timestep to consider only the information of the receiver/sender node
-        ## receivers, senders: (num_samples, 2*num_atoms,  num_timesteps*num_dims)
-        receivers = torch.matmul(rel_rec, x)
+        # rel_rec[num_features * num_atoms, num_atoms] * x[num_samples, num_atoms, num_timesteps]
+        # receivers, senders: (num_samples, num_atoms,  num_timesteps*num_dims)
+        receivers = torch.matmul(rel_rec, x) 
         senders = torch.matmul(rel_send, x)
 
         # concatecate filtered reciever/sender hidden representation
