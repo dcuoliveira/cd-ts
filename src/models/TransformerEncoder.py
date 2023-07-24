@@ -1,26 +1,20 @@
 
 import torch
 
-from models.MLP import MLP
+from models.Transformer import Transformer
         
-class MLPEncoder(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_edges, do_prob=0., factor=True):
-        super(MLPEncoder, self).__init__()
+class TransformerEncoder(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_edges, do_prob=0.):
+        super(TransformerEncoder, self).__init__()
 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_edges = num_edges
-        self.factor = factor
 
-        self.mlp1 = MLP(input_dim, hidden_dim, hidden_dim, do_prob)
-        self.mlp2 = MLP(hidden_dim * 2, hidden_dim, hidden_dim, do_prob)
-        self.mlp3 = MLP(hidden_dim, hidden_dim, hidden_dim, do_prob)
-        if self.factor:
-            self.mlp4 = MLP(hidden_dim * 3, hidden_dim, hidden_dim, do_prob)
-            print("Using factor graph MLP encoder.")
-        else:
-            self.mlp4 = MLP(hidden_dim * 2, hidden_dim, hidden_dim, do_prob)
-            print("Using MLP encoder.")
+        self.transformer1 = Transformer(input_dim, hidden_dim, hidden_dim, do_prob)
+        self.transformer2 = Transformer(hidden_dim * 2, hidden_dim, hidden_dim, do_prob)
+        self.transformer3 = Transformer(hidden_dim, hidden_dim, hidden_dim, do_prob)
+
         self.fc_out = torch.nn.Linear(hidden_dim, num_edges)
         self.init_weights()
 
@@ -57,34 +51,25 @@ class MLPEncoder(torch.nn.Module):
         # NOTE: why do we need to build the mlp parameters associated to the num_timesteps*num_feature_per_obj instead of num_atoms ?
         
         # node hidden representation
-        x = self.mlp1(x)
+        x = self.transformer1(x)
         # from nodes to edges hidden representation
         x = self.node2edge(x, rel_rec, rel_send)
-        x = self.mlp2(x)
+        x = self.transformer2(x)
         # keep edges first interaction hidden representation
         x_skip = x
 
         if self.factor:
             # aggregate edge represantations back to nodes (now we have more than one neighbor interaction for each node)
             x = self.edge2node(x, rel_rec)
-            x = self.mlp3(x)
+            x = self.transformer3(x)
             # from nodes to edges hidden representation
             x = self.node2edge(x, rel_rec, rel_send)
             # add edges edges first interaction hidden representation to the edges final interation
             x = torch.cat((x, x_skip), dim=2)
-            x = self.mlp4(x)
+            x = self.transformer4(x)
         else:
             x = self.mlp3(x)
             x = torch.cat((x, x_skip), dim=2)
-            x = self.mlp4(x)
+            x = self.transformer4(x)
 
         return self.fc_out(x)
-    
-class MLPEncoderWrapper():
-    def __init__(self, input_dim, hidden_dim=256, num_edges=2):
-        self.model_name = "nrimlp"
-        self.n_epochs = 100
-
-        self.ModelClass = MLPEncoder(input_dim=input_dim,
-                                     hidden_dim=hidden_dim,
-                                     num_edges=num_edges)
