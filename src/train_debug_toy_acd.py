@@ -42,6 +42,7 @@ if __name__ == "__main__":
     # NOTE: Random sampling occurs in the "num_sample" dimension instead of "num_obs"
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
     off_diag = np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)
+    # rel_rec, rel_send: [num_atoms * (num_atoms - 1), num_atoms]
     rel_rec = np.array(encode_onehot(np.where(off_diag)[0]), dtype=np.float32)
     rel_send = np.array(encode_onehot(np.where(off_diag)[1]), dtype=np.float32)
     rel_rec = torch.FloatTensor(rel_rec).to(device)
