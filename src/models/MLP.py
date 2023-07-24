@@ -5,7 +5,15 @@ from torch import nn
 class MLP(torch.nn.Module):
     """Two-layer fully-connected ELU net with batch norm."""
 
-    def __init__(self, n_in, n_hid, n_out, do_prob=0., use_batch_norm=True, final_layer=False, activation='elu', initialise_weights=True):
+    def __init__(self,
+                 n_in,
+                 n_hid,
+                 n_out,
+                 do_prob=0.,
+                 use_batch_norm=True,
+                 final_layer=False,
+                 activation='elu',
+                 initialise_weights=True):
         super(MLP, self).__init__()
         self.fc1 = torch.nn.Linear(n_in, n_hid)
         self.bn = torch.nn.BatchNorm1d(n_out)
