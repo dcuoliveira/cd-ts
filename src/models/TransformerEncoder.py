@@ -4,18 +4,68 @@ import torch
 from models.Transformer import Transformer
         
 class TransformerEncoder(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_edges, do_prob=0.):
+    def __init__(self,
+                 input_dim,
+                 hidden_dim,
+                 num_edges,
+                 n_encoder_layers,
+                 n_heads,
+                 dim_feedforward_encoder,
+                 factor=True):
         super(TransformerEncoder, self).__init__()
 
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
+        # parameters for the linear layer of the trasformer
+        self.n_encoder_input_layer_in = input_dim
+        self.n_encoder_input_layer_out = hidden_dim
+
+        # parameters for the trasnformer encoder
+        self.n_encoder_layers = n_encoder_layers
+        self.n_heads = n_heads
+        self.dim_feedforward_encoder = dim_feedforward_encoder
+
+        # "graph" part of the transformer
         self.num_edges = num_edges
+        self.factor = factor
 
-        self.transformer1 = Transformer(input_dim, hidden_dim, hidden_dim, do_prob)
-        self.transformer2 = Transformer(hidden_dim * 2, hidden_dim, hidden_dim, do_prob)
-        self.transformer3 = Transformer(hidden_dim, hidden_dim, hidden_dim, do_prob)
+        self.transformer1 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_in,
+                                        n_encoder_input_layer_out=self.n_encoder_input_layer_out,
+                                        n_encoder_layers=self.n_encoder_layers,
+                                        n_heads=self.n_heads,
+                                        num_predicted_features=self.n_encoder_input_layer_out,
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+        
+        self.transformer2 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 2,
+                                        n_encoder_input_layer_out=self.n_encoder_input_layer_out,
+                                        n_encoder_layers=self.n_encoder_layers,
+                                        n_heads=self.n_heads,
+                                        num_predicted_features=self.n_encoder_input_layer_out,
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+        
+        self.transformer3 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out,
+                                        n_encoder_input_layer_out=self.n_encoder_input_layer_out,
+                                        n_encoder_layers=self.n_encoder_layers,
+                                        n_heads=self.n_heads,
+                                        num_predicted_features=self.n_encoder_input_layer_out,
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+        
+        if self.factor:
+            self.transformer4 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 3,
+                                            n_encoder_input_layer_out=self.n_encoder_input_layer_out,
+                                            n_encoder_layers=self.n_encoder_layers,
+                                            n_heads=self.n_heads,
+                                            num_predicted_features=self.n_encoder_input_layer_out,
+                                            dim_feedforward_encoder=self.dim_feedforward_encoder)
+            print("Using factor graph Transformer encoder.")
+        else:
+            self.transformer4 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 3,
+                                            n_encoder_input_layer_out=self.n_encoder_input_layer_out,
+                                            n_encoder_layers=self.n_encoder_layers,
+                                            n_heads=self.n_heads,
+                                            num_predicted_features=self.n_encoder_input_layer_out,
+                                            dim_feedforward_encoder=self.dim_feedforward_encoder)
+            print("Using Transformer encoder.")
 
-        self.fc_out = torch.nn.Linear(hidden_dim, num_edges)
+        self.fc_out = torch.nn.Linear(self.n_encoder_input_layer_out, num_edges)
         self.init_weights()
 
     def init_weights(self):
