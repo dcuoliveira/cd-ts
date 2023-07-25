@@ -9,7 +9,7 @@ class PositionalEncoder(nn.Module):
         self, 
         dropout: float=0.1, 
         max_seq_len: int=5000, 
-        n_out: int=512,
+        d_model: int=512,
         batch_first: bool=False
         ):
 
@@ -22,19 +22,19 @@ class PositionalEncoder(nn.Module):
 
         super().__init__()
 
-        self.d_model = n_out
+        self.d_model = d_model
         self.batch_first = batch_first
         position = torch.arange(max_seq_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, n_out, 2) * (-math.log(10000.0) / n_out))
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
 
         self.dropout = nn.Dropout(p=dropout)  
 
         if self.batch_first:
-            pe = torch.zeros(1, max_seq_len, n_out)
+            pe = torch.zeros(1, max_seq_len, d_model)
             pe[0, :, 0::2] = torch.sin(position * div_term)
             pe[0, :, 1::2] = torch.cos(position * div_term)
         else:
-            pe = torch.zeros(max_seq_len, 1, n_out)
+            pe = torch.zeros(max_seq_len, 1, d_model)
             pe[:, 0, 0::2] = torch.sin(position * div_term)
             pe[:, 0, 1::2] = torch.cos(position * div_term)
         
@@ -44,7 +44,7 @@ class PositionalEncoder(nn.Module):
         
         """
         Args:
-            x: Tensor, shape [batch_size, enc_seq_len, n_out] or [enc_seq_len, batch_size, n_out]
+            x: Tensor, shape [batch_size, enc_seq_len, d_model] or [enc_seq_len, batch_size, d_model]
         """
 
         if self.batch_first:
@@ -57,8 +57,8 @@ class PositionalEncoder(nn.Module):
 class Transformer(nn.Module):
 
     def __init__(self, 
-        n_in: int,
-        n_out: int=512,  
+        n_encoder_input_layer_in: int,
+        n_encoder_input_layer_out: int,
         n_encoder_layers: int=4,
         n_heads: int=8,
         dropout_encoder: float=0.2, 
@@ -85,22 +85,22 @@ class Transformer(nn.Module):
         super().__init__() 
 
         self.encoder_input_layer = nn.Linear(
-            in_features=n_in, 
-            out_features=n_out 
+            in_features=n_encoder_input_layer_in, 
+            out_features=n_encoder_input_layer_out 
             )
         
         self.linear_mapping = nn.Linear(
-            in_features=n_out, 
+            in_features=n_encoder_input_layer_out, 
             out_features=num_predicted_features
             )
 
         self.positional_encoding_layer = PositionalEncoder(
-            d_model=n_out,
+            d_model=n_encoder_input_layer_out,
             dropout=dropout_pos_enc
             )
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=n_out, 
+            d_model=n_encoder_input_layer_out, 
             nhead=n_heads,
             dim_feedforward=dim_feedforward_encoder,
             dropout=dropout_encoder,
