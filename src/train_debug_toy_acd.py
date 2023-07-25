@@ -5,11 +5,13 @@ import torch
 from tqdm import tqdm
 from torch.nn import functional as F
 import argparse
+import pandas as pd
+import json
 
 from data_loaders import load_springs_data
 from models.MLPEncoder import MLPEncoder
 from models.MLPDecoder import MLPDecoder
-from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device
+from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -26,6 +28,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # running parameters
+    model_name = "mlp_encoder_decoder"
     device = torch.device(find_gpu_device())
     num_atoms = args.num_atoms
     dataset_name = args.simulation
@@ -56,6 +59,8 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, gamma=0.5)
     # train
+    train_acc_vals = []
+
     encoder.train()
     decoder.train()
     for i in range(n_epochs):
@@ -89,7 +94,34 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
             edge_acc = torch.sum(edges.argmax(-1) == gt_edges).item()/(B*num_atoms*(num_atoms-1))
+
+            train_acc_vals.append(edge_acc)
+
             pbar.set_description("Loss: {:.4e}, Edge Acc: {:2f}, MSE: {:4e}".format(loss.item(), edge_acc, F.mse_loss(output, decode_target).item()))
         scheduler.step()
+
+    acc_df = pd.DataFrame(train_acc_vals, columns=["acc"])
+
+    results = {
+        
+        "acc": acc_df,
+
+        }
+
+    output_path = os.path.join(os.path.dirname(__file__),
+                               "results",
+                               model_name)
+
+    # check if dir exists
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    # save args
+    args_dict = vars(args)  
+    with open(os.path.join(output_path, 'args.json'), 'w') as fp:
+        json.dump(args_dict, fp)
+
+    # save results
+    save_pkl(data=results, path=os.path.join(output_path, "results.pickle"))
             
 

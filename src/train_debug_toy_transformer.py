@@ -11,7 +11,7 @@ import json
 from data_loaders import load_springs_data
 from models.TransformerEncoder import TransformerEncoder
 from models.MLPDecoder import MLPDecoder
-from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device
+from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # running parameters
-    model_name = "transformer_encoder_encoderonly"
+    model_name = "transformer_encoder_encoderonly_mlp_decoder"
     device = torch.device(find_gpu_device())
     num_atoms = args.num_atoms
     dataset_name = args.simulation
@@ -129,7 +129,6 @@ if __name__ == "__main__":
         json.dump(args_dict, fp)
 
     # save results
-    output_name = "{model_name}.pt".format(model_name=model_name)
-    torch.save(results, os.path.join(output_path, output_name))    
+    save_pkl(data=results, path=os.path.join(output_path, "results.pickle"))
             
 
