@@ -28,7 +28,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # running parameters
-    model_name = "transformer_encoder_encoderonly_mlp_decoder"
+    model_name = "transformer_encoder_mlp_decoder"
     device = torch.device(find_gpu_device())
     num_atoms = args.num_atoms
     dataset_name = args.simulation
