@@ -11,7 +11,7 @@ import json
 from data_loaders import load_springs_data
 from models.TransformerEncoder import TransformerEncoder
 from models.MLPDecoder import MLPDecoder
-from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl
+from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl, generate_square_subsequent_mask
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -52,12 +52,15 @@ if __name__ == "__main__":
     rel_send = torch.FloatTensor(rel_send).to(device)
 
     # load Models
+    dim_feedforward_encoder = 200
     encoder = TransformerEncoder(input_dim=49*4,
                                  hidden_dim=256,
                                  num_edges=2,
                                  n_encoder_layers=4,
-                                 n_heads=8,
-                                 dim_feedforward_encoder=2000).to(device)
+                                 n_decoder_layers=4,
+                                 dim_feedforward_encoder=dim_feedforward_encoder,
+                                 dim_feedforward_decoder=dim_feedforward_encoder,
+                                 n_heads=8).to(device)
     decoder = MLPDecoder(input_dim=4,
                          hidden_dim=256,
                          num_edges=2).to(device)
@@ -80,7 +83,14 @@ if __name__ == "__main__":
             gt_edges = gt_edges.to(device)
 
             # train encoder
+
+            src_mask = generate_square_subsequent_mask(
+                            dim1=features.shape[0],
+                            dim2=dim_feedforward_encoder
+                            )
+
             ## features: (batch_size, num_objects, num_timesteps, num_feature_per_obj)
+            # [output_sequence_length, enc_seq_len]
             logits = encoder.forward(features, rel_rec=rel_rec, rel_send=rel_send)
             # NOTE - Why do we have 2*num_objects instead of num_objects?
             ## logits: (batch_size, 2*num_objects)
