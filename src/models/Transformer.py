@@ -60,10 +60,13 @@ class Transformer(nn.Module):
         n_encoder_input_layer_in: int,
         n_encoder_input_layer_out: int,
         n_encoder_layers: int=4,
+        n_decoder_layers: int=4,
         n_heads: int=8,
         dropout_encoder: float=0.2, 
+        dropout_decoder: float=0.2, 
         dropout_pos_enc: float=0.1,
         dim_feedforward_encoder: int=2048,
+        dim_feedforward_decoder: int=2048,
         num_predicted_features: int=1
         ): 
 
@@ -89,6 +92,11 @@ class Transformer(nn.Module):
             out_features=n_encoder_input_layer_out 
             )
         
+        self.decoder_input_layer = nn.Linear(
+            in_features=num_predicted_features,
+            out_features=n_encoder_input_layer_out
+            )  
+        
         self.linear_mapping = nn.Linear(
             in_features=n_encoder_input_layer_out, 
             out_features=num_predicted_features
@@ -111,9 +119,24 @@ class Transformer(nn.Module):
             num_layers=n_encoder_layers, 
             norm=None
             )
+        
+        
+        decoder_layer = nn.TransformerDecoderLayer(
+            d_model=n_encoder_input_layer_out,
+            nhead=n_heads,
+            dim_feedforward=dim_feedforward_decoder,
+            dropout=dropout_decoder,
+            )
+
+        self.decoder = nn.TransformerDecoder(
+            decoder_layer=decoder_layer,
+            num_layers=n_decoder_layers, 
+            norm=None
+            )
 
     def forward(self,
-                inputs: Tensor) -> Tensor:
+                inputs: Tensor,
+                input_mask: Tensor=None) -> Tensor:
    
         # linear layer
         # output shape: [src_seq_length, batch_size, hidden_dim]
@@ -127,13 +150,23 @@ class Transformer(nn.Module):
         # src shape: [src_seq_length, batch_size, hidden_dim]
         # NOTE - need attention mask ?
         # NOTE - modify self-attention to attend over d or n ?
-        encoder_output = self.encoder(src=x) # self-attention attends over d
-        encoder_output = self.encoder(src=encoder_output) # self-attention attends over n
-        encoder_output = self.encoder(src=encoder_output) # self-attention attends over d
-        encoder_output = self.encoder(src=encoder_output) # self-attention attends over n
+        encoder_output = self.encoder(src=x)
+
+        # transformer decoder I: masked muti-head self attention -> add & norm
+        # output shape: [tgt_seq_length, batch_size, hidden_dim]
+        decoder_output = self.decoder_input_layer(encoder_output)
+
+        # transformer decoder II: muti-head attention -> add & norm -> feed forward -> add & norm
+        # output shape: [tgt_seq_length, batch_size, hidden_dim]
+        decoder_output = self.decoder(
+            tgt=decoder_output,
+            memory=x,
+            tgt_mask=input_mask,
+            memory_mask=input_mask # src and tgt masks may be different
+            )
 
         # linear mapping
         # output shape [tgt_seq_length, batch_size, num_features]
-        encoder_output = self.linear_mapping(encoder_output)
+        decoder_output = self.linear_mapping(encoder_output)
 
-        return encoder_output
+        return decoder_output
