@@ -3,6 +3,11 @@ import pandas as pd
 import numpy as np
 import torch.nn.functional as F
 import torch
+from torch import Tensor
+
+def generate_square_subsequent_mask(dim1: int, dim2: int) -> Tensor:
+    return torch.triu(torch.ones(dim1, dim2) * float('-inf'), diagonal=1)
+
 
 def sample_gumbel(logits, tau=1.0):
     gumbel_noise = -torch.log(1e-10 - torch.log(torch.rand_like(logits) + 1e-10))
