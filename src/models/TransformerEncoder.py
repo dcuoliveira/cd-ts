@@ -9,8 +9,10 @@ class TransformerEncoder(torch.nn.Module):
                  hidden_dim,
                  num_edges,
                  n_encoder_layers,
+                 n_decoder_layers,
                  n_heads,
                  dim_feedforward_encoder,
+                 dim_feedforward_decoder,
                  factor=True):
         super(TransformerEncoder, self).__init__()
 
@@ -20,8 +22,10 @@ class TransformerEncoder(torch.nn.Module):
 
         # parameters for the trasnformer encoder
         self.n_encoder_layers = n_encoder_layers
+        self.n_decoder_layers = n_decoder_layers
         self.n_heads = n_heads
         self.dim_feedforward_encoder = dim_feedforward_encoder
+        self.dim_feedforward_decoder = dim_feedforward_decoder
 
         # "graph" part of the transformer
         self.num_edges = num_edges
