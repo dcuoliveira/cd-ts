@@ -84,7 +84,6 @@ if __name__ == "__main__":
             gt_edges = gt_edges.to(device)
 
             # train encoder
-
             src_mask = generate_square_subsequent_mask(
                             dim1=features.shape[0],
                             dim2=dim_feedforward_encoder
