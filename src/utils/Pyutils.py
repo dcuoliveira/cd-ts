@@ -9,7 +9,7 @@ def generate_square_subsequent_mask(dim1: int, dim2: int, atten_mask: bool) -> T
     if atten_mask:
         return torch.triu(torch.ones(dim1, dim2) * float('-inf'), diagonal=1)
     else:
-        return torch.triu(torch.ones(dim1, dim2), diagonal=0)
+        return torch.triu(torch.ones(dim1, dim2), diagonal=1)
 
 def sample_gumbel(logits, tau=1.0):
     gumbel_noise = -torch.log(1e-10 - torch.log(torch.rand_like(logits) + 1e-10))
