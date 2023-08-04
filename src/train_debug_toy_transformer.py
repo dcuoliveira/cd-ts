@@ -14,15 +14,10 @@ from models.MLPDecoder import MLPDecoder
 from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl, generate_square_subsequent_mask
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--num_atoms", type=int, default=5, help="If to generate train data only."
-)
-parser.add_argument(
-    "--simulation", type=str, default="springs", help="What simulation to generate."
-)
-parser.add_argument(
-    "--n_epochs", type=int, default=500, help="What simulation to generate."
-)
+parser.add_argument("--num_atoms", type=int, default=5, help="If to generate train data only.")
+parser.add_argument("--simulation", type=str, default="springs", help="What simulation to generate.")
+parser.add_argument("--n_epochs", type=int, default=500, help="What simulation to generate.")
+parser.add_argument("--atten_mask", type=bool, default=False, help="What simulation to generate.")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -86,8 +81,8 @@ if __name__ == "__main__":
             # train encoder
             src_mask = generate_square_subsequent_mask(
                             dim1=features.shape[0],
-                            dim2=dim_feedforward_encoder
-                            )
+                            dim2=dim_feedforward_encoder,
+                            atten_mask=args.atten_mask)
 
             ## features: (batch_size, num_objects, num_timesteps, num_feature_per_obj)
             # [output_sequence_length, enc_seq_len]
