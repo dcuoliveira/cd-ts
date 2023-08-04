@@ -67,7 +67,8 @@ class Transformer(nn.Module):
         dropout_pos_enc: float=0.1,
         dim_feedforward_encoder: int=2048,
         dim_feedforward_decoder: int=2048,
-        num_predicted_features: int=1
+        num_predicted_features: int=1,
+        batch_first: bool=True,
         ): 
 
         """
@@ -112,6 +113,7 @@ class Transformer(nn.Module):
             nhead=n_heads,
             dim_feedforward=dim_feedforward_encoder,
             dropout=dropout_encoder,
+            batch_first=batch_first
             )
 
         self.encoder = nn.TransformerEncoder(
@@ -126,6 +128,7 @@ class Transformer(nn.Module):
             nhead=n_heads,
             dim_feedforward=dim_feedforward_decoder,
             dropout=dropout_decoder,
+            batch_first=batch_first
             )
 
         self.decoder = nn.TransformerDecoder(

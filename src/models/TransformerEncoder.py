@@ -13,6 +13,7 @@ class TransformerEncoder(torch.nn.Module):
                  n_heads,
                  dim_feedforward_encoder,
                  dim_feedforward_decoder,
+                 batch_first=True,
                  factor=True):
         super(TransformerEncoder, self).__init__()
 
@@ -31,26 +32,31 @@ class TransformerEncoder(torch.nn.Module):
         self.num_edges = num_edges
         self.factor = factor
 
+        self.batch_first = batch_first
+
         self.transformer1 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_in,
                                         n_encoder_input_layer_out=self.n_encoder_input_layer_out,
                                         n_encoder_layers=self.n_encoder_layers,
                                         n_heads=self.n_heads,
                                         num_predicted_features=self.n_encoder_input_layer_out,
-                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder,
+                                        batch_first=self.batch_first)
         
         self.transformer2 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 2,
                                         n_encoder_input_layer_out=self.n_encoder_input_layer_out,
                                         n_encoder_layers=self.n_encoder_layers,
                                         n_heads=self.n_heads,
                                         num_predicted_features=self.n_encoder_input_layer_out,
-                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder,
+                                        batch_first=self.batch_first)
         
         self.transformer3 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out,
                                         n_encoder_input_layer_out=self.n_encoder_input_layer_out,
                                         n_encoder_layers=self.n_encoder_layers,
                                         n_heads=self.n_heads,
                                         num_predicted_features=self.n_encoder_input_layer_out,
-                                        dim_feedforward_encoder=self.dim_feedforward_encoder)
+                                        dim_feedforward_encoder=self.dim_feedforward_encoder,
+                                        batch_first=self.batch_first)
         
         if self.factor:
             self.transformer4 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 3,
@@ -58,7 +64,8 @@ class TransformerEncoder(torch.nn.Module):
                                             n_encoder_layers=self.n_encoder_layers,
                                             n_heads=self.n_heads,
                                             num_predicted_features=self.n_encoder_input_layer_out,
-                                            dim_feedforward_encoder=self.dim_feedforward_encoder)
+                                            dim_feedforward_encoder=self.dim_feedforward_encoder,
+                                            batch_first=self.batch_first)
             print("Using factor graph Transformer encoder.")
         else:
             self.transformer4 = Transformer(n_encoder_input_layer_in=self.n_encoder_input_layer_out * 3,
@@ -66,7 +73,8 @@ class TransformerEncoder(torch.nn.Module):
                                             n_encoder_layers=self.n_encoder_layers,
                                             n_heads=self.n_heads,
                                             num_predicted_features=self.n_encoder_input_layer_out,
-                                            dim_feedforward_encoder=self.dim_feedforward_encoder)
+                                            dim_feedforward_encoder=self.dim_feedforward_encoder,
+                                            batch_first=self.batch_first)
             print("Using Transformer encoder.")
 
         self.fc_out = torch.nn.Linear(self.n_encoder_input_layer_out, num_edges)
@@ -92,6 +100,9 @@ class TransformerEncoder(torch.nn.Module):
         # concatecate filtered reciever/sender hidden representation
         edges = torch.cat([senders, receivers], dim=2)
         return edges
+    
+    def permute_dims(self, x):
+        return x.permute(1, 0, 2) if self.batch_first else x
 
     def forward(self, inputs, rel_rec, rel_send):
         if len(inputs.shape) > 3:
@@ -101,29 +112,46 @@ class TransformerEncoder(torch.nn.Module):
         else:
             x = inputs.view(1, inputs.shape[0], inputs.shape[1])
 
+        if self.batch_first:
+            x = x.permute(1, 0, 2)
+
         # NOTE: num_timesteps*num_feature_per_obj timeseps => num_timesteps*num_dims parameters on the MLP
         # NOTE: why do we need to build the mlp parameters associated to the num_timesteps*num_feature_per_obj instead of num_atoms ?
         
         # node hidden representation
         x = self.transformer1(x)
+        x = self.permute_dims(x)
+
         # from nodes to edges hidden representation
         x = self.node2edge(x, rel_rec, rel_send)
+        x = self.permute_dims(x)
         x = self.transformer2(x)
+
+        x = self.permute_dims(x)
+
         # keep edges first interaction hidden representation
         x_skip = x
 
         if self.factor:
             # aggregate edge represantations back to nodes (now we have more than one neighbor interaction for each node)
             x = self.edge2node(x, rel_rec)
+            x = self.permute_dims(x)
             x = self.transformer3(x)
+            x = self.permute_dims(x)
+
             # from nodes to edges hidden representation
             x = self.node2edge(x, rel_rec, rel_send)
+
             # add edges edges first interaction hidden representation to the edges final interation
             x = torch.cat((x, x_skip), dim=2)
+            x = self.permute_dims(x)
             x = self.transformer4(x)
         else:
-            x = self.mlp3(x)
+            x = self.permute_dims(x)
+            x = self.transformer3(x)
+            x = self.permute_dims(x)
             x = torch.cat((x, x_skip), dim=2)
+            x = self.permute_dims(x)
             x = self.transformer4(x)
 
         return self.fc_out(x)
