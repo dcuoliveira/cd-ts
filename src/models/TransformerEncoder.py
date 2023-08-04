@@ -154,4 +154,6 @@ class TransformerEncoder(torch.nn.Module):
             x = self.permute_dims(x)
             x = self.transformer4(x)
 
+        x = self.permute_dims(x)
+        
         return self.fc_out(x)
