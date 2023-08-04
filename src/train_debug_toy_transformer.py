@@ -60,7 +60,8 @@ if __name__ == "__main__":
                                  n_decoder_layers=4,
                                  dim_feedforward_encoder=dim_feedforward_encoder,
                                  dim_feedforward_decoder=dim_feedforward_encoder,
-                                 n_heads=8).to(device)
+                                 n_heads=8,
+                                 batch_first=True).to(device)
     decoder = MLPDecoder(input_dim=4,
                          hidden_dim=256,
                          num_edges=2).to(device)
