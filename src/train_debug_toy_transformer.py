@@ -17,12 +17,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--num_atoms", type=int, default=5, help="If to generate train data only.")
 parser.add_argument("--simulation", type=str, default="springs", help="What simulation to generate.")
 parser.add_argument("--n_epochs", type=int, default=500, help="What simulation to generate.")
-parser.add_argument("--atten_mask", type=bool, default=False, help="What simulation to generate.")
+parser.add_argument("--atten_mask", type=bool, default=True, help="What simulation to generate.")
 
 if __name__ == "__main__":
     args = parser.parse_args()
-
-    print(args.atten_mask)
 
     # running parameters
     model_name = "transformer_encoder_mlp_decoder"
