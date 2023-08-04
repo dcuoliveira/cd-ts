@@ -22,6 +22,8 @@ parser.add_argument("--atten_mask", type=bool, default=False, help="What simulat
 if __name__ == "__main__":
     args = parser.parse_args()
 
+    print(args.atten_mask)
+
     # running parameters
     model_name = "transformer_encoder_mlp_decoder"
     device = torch.device(find_gpu_device())
