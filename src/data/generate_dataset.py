@@ -5,6 +5,7 @@ import json
 import time
 import numpy as np
 import argparse
+import torch
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
@@ -51,6 +52,9 @@ def parse_args():
     )
     parser.add_argument(
         "--n_lags", type=int, default=2, help="Number of lags in the simulation (Econ only)."
+    )
+    parser.add_argument(
+        "--sparsity_threshold", type=float, default=1-0.95, help="Percentual of zeros in the adj matrix (Econ only)."
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed.") # 42
     parser.add_argument(
@@ -163,6 +167,40 @@ def generate_dataset(num_sims, length, sample_freq, sampled_sims=None):
 
     return loc_all, vel_all, edges_all
 
+def generate_econ_dataset(num_samples, T):
+
+    # feats: (num_samples, num_objects, num_timesteps, num_feature_per_obj)
+    feats = torch.zeros((num_samples, args.num_balls, args.length, 1))
+    # edges_all: (num_samples, num_objects, num_objects * num_lags)
+    edges_all = torch.zeros((num_samples, args.num_balls, args.num_balls * args.num_lags))
+    # phi_all: (num_samples, num_objects, num_objects * num_lags)
+    phi_all = torch.zeros((num_samples, args.num_balls, args.num_balls * args.num_lags))
+
+    pbar = tqdm(range(num_samples), total=num_samples)
+    for s in pbar:
+
+        # simulate VAR process
+        t = time.time()
+        var_sim, phi = simulate_VAR(seed=s)
+
+        # add time series to each dimension
+        for i in range(num_objects):
+            feats[s, i, :, :] = torch.from_numpy(var_sim[:, i][:, None])
+
+        # add phis
+        phi_all[s, :, :] = torch.from_numpy(phi)
+
+        # add phi into adjacency matrix
+        # if phi[i, j] != 0, then there is an edge from j to i
+        for i in range(phi.shape[0]):
+            for j in range(phi.shape[1]):
+                if phi[i, j] != 0:
+                    edges_all[s, i, j] = 1
+
+        print("Iter: {}, Simulation time: {}".format(s, time.time() - t))
+
+    return feats, edges_all, phi_all
+
 
 if __name__ == "__main__":
 
@@ -179,6 +217,7 @@ if __name__ == "__main__":
             num_timesteps = args.length,
             num_objects = args.n_balls,
             num_lags = args.n_lags,
+            sparsity_threshold = args.sparsity_threshold,
         )
     else:
         raise ValueError("Simulation {} not implemented".format(args.simulation))
@@ -233,20 +272,29 @@ if __name__ == "__main__":
     )
 
     if args.train_only:
-        np.random.seed(args.seed)
-
         print("Generating {} training simulations".format(args.num_train))
-        loc_train, vel_train, edges_train = generate_dataset(
-            args.num_train,
-            args.length,
-            args.sample_freq,
-            sampled_sims=(None),
-        )
-        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
-        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
-        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train)
+
+        if args.simulation == "econ":
+            loc_train, edges_train = generate_econ_dataset(
+                num_samples=args.num_train,
+                T=args.length,
+            )
+        else:
+            np.random.seed(args.seed)
+            loc_train, vel_train, edges_train = generate_dataset(
+                args.num_train,
+                args.length,
+                args.sample_freq,
+                sampled_sims=(None),
+            )
+
+        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train) if loc_train is not None else None
+        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train) if vel_train is not None else None
+        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train) if edges_train is not None else None
 
     else:
+        raise NotImplementedError("Not implemented")
+
         print("Generating {} training simulations".format(args.num_train))
         loc_train, vel_train, edges_train = generate_dataset(
             args.num_train,
