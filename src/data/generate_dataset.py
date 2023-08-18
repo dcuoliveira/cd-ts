@@ -6,9 +6,10 @@ import time
 import numpy as np
 import argparse
 
-# sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
 from data.synthetic_sim import SpringSim
+from data.economic_sim import EconomicSim
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -16,28 +17,28 @@ def parse_args():
         "--train_only", type=bool, default=True, help="If to generate train data only."
     )
     parser.add_argument(
-        "--simulation", type=str, default="springs", help="What simulation to generate."
+        "--simulation", type=str, default="econ", help="What simulation to generate."
     )
     parser.add_argument(
-        "--num-train",
+        "--num_train",
         type=int,
         default=50000,
         help="Number of training simulations to generate.",
     )
     parser.add_argument(
-        "--num-valid",
+        "--num_valid",
         type=int,
         default=10000,
         help="Number of validation simulations to generate.",
     )
     parser.add_argument(
-        "--num-test",
+        "--num_test",
         type=int,
         default=10000,
         help="Number of test simulations to generate.",
     )
     parser.add_argument(
-        "--length", type=int, default=5000, help="Length of trajectory."
+        "--length", type=int, default=1000, help="Length of trajectory."
     )
     parser.add_argument(
         "--sample_freq",
@@ -48,14 +49,17 @@ def parse_args():
     parser.add_argument(
         "--n_balls", type=int, default=5, help="Number of balls in the simulation."
     )
-    parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--n_lags", type=int, default=2, help="Number of lags in the simulation (Econ only)."
+    )
+    parser.add_argument("--seed", type=int, default=None, help="Random seed.") # 42
     parser.add_argument(
         "--datadir", type=str, default=os.path.dirname(__file__), help="Name of directory to save data to."
     )
     parser.add_argument(
         "--temperature",
         type=float,
-        default=0.1,
+        default=None, # 0.1
         help="Temperature of SpringSim simulation.",
     )
     parser.add_argument(
@@ -170,6 +174,12 @@ if __name__ == "__main__":
             n_balls=args.n_balls,
             interaction_strength=args.temperature,
         )
+    elif args.simulation == "econ":
+        sim = EconomicSim(
+            num_timesteps = args.length,
+            num_objects = args.n_balls,
+            num_lags = args.n_lags,
+        )
     else:
         raise ValueError("Simulation {} not implemented".format(args.simulation))
 
@@ -222,9 +232,9 @@ if __name__ == "__main__":
         separators=(",", ": "),
     )
 
-    np.random.seed(args.seed)
-
     if args.train_only:
+        np.random.seed(args.seed)
+
         print("Generating {} training simulations".format(args.num_train))
         loc_train, vel_train, edges_train = generate_dataset(
             args.num_train,
