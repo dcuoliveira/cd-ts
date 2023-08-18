@@ -76,7 +76,7 @@ class EconomicSim(object):
             np.random.seed(seed)  # Seed for reproducibility
 
         if phi is None:
-            phi = generate_stationary_phi(self.num_objects, self.num_lags, self.sparsity_threshold)
+            phi = self.generate_stationary_phi()
         
         if c is None:
             c = np.zeros(self.num_objects)
