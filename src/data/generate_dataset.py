@@ -6,6 +6,7 @@ import time
 import numpy as np
 import argparse
 import torch
+from tqdm import tqdm
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
@@ -167,24 +168,24 @@ def generate_dataset(num_sims, length, sample_freq, sampled_sims=None):
 
     return loc_all, vel_all, edges_all
 
-def generate_econ_dataset(num_samples, T):
+def generate_econ_dataset(num_samples, num_balls, T, num_lags):
 
     # feats: (num_samples, num_objects, num_timesteps, num_feature_per_obj)
-    feats = torch.zeros((num_samples, args.num_balls, args.length, 1))
+    feats = torch.zeros((num_samples, num_balls, T, 1))
     # edges_all: (num_samples, num_objects, num_objects * num_lags)
-    edges_all = torch.zeros((num_samples, args.num_balls, args.num_balls * args.num_lags))
+    edges_all = torch.zeros((num_samples, num_balls, num_balls * num_lags))
     # phi_all: (num_samples, num_objects, num_objects * num_lags)
-    phi_all = torch.zeros((num_samples, args.num_balls, args.num_balls * args.num_lags))
+    phi_all = torch.zeros((num_samples, num_balls, num_balls * num_lags))
 
     pbar = tqdm(range(num_samples), total=num_samples)
     for s in pbar:
 
         # simulate VAR process
         t = time.time()
-        var_sim, phi = simulate_VAR(seed=s)
+        var_sim, phi = sim.simulate_VAR(seed=s)
 
         # add time series to each dimension
-        for i in range(num_objects):
+        for i in range(num_balls):
             feats[s, i, :, :] = torch.from_numpy(var_sim[:, i][:, None])
 
         # add phis
@@ -276,8 +277,10 @@ if __name__ == "__main__":
 
         if args.simulation == "econ":
             loc_train, edges_train = generate_econ_dataset(
+                num_balls=args.n_balls,
                 num_samples=args.num_train,
                 T=args.length,
+                num_lags=args.n_lags,
             )
         else:
             np.random.seed(args.seed)
