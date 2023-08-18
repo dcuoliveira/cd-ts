@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         "--num_train",
         type=int,
-        default=50000,
+        default=100,
         help="Number of training simulations to generate.",
     )
     parser.add_argument(
@@ -276,12 +276,13 @@ if __name__ == "__main__":
         print("Generating {} training simulations".format(args.num_train))
 
         if args.simulation == "econ":
-            loc_train, edges_train = generate_econ_dataset(
+            loc_train, edges_train, phis_train = generate_econ_dataset(
                 num_balls=args.n_balls,
                 num_samples=args.num_train,
                 T=args.length,
                 num_lags=args.n_lags,
             )
+            vel_train = None
         else:
             np.random.seed(args.seed)
             loc_train, vel_train, edges_train = generate_dataset(
@@ -294,6 +295,7 @@ if __name__ == "__main__":
         np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train) if loc_train is not None else None
         np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train) if vel_train is not None else None
         np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train) if edges_train is not None else None
+        np.save(os.path.join(args.datadir, "phis_train" + suffix + ".npy"), phis_train) if phis_train is not None else None
 
     else:
         raise NotImplementedError("Not implemented")
