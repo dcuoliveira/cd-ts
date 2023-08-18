@@ -6,6 +6,35 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data.dataset import TensorDataset
 
+def load_economic_simulations(root_dir, suffix, num_atoms, split='train'):
+
+    loc_train = np.load(os.path.join(root_dir, "loc_" + split + suffix + ".npy"))
+    vel_train = np.load(os.path.join(root_dir, "vel_" + split + suffix + ".npy"))
+    edges_train = np.load(os.path.join(root_dir, "edges_" + split + suffix + ".npy"))
+    
+    loc_max = loc_train.max()
+    loc_min = loc_train.min()
+    vel_max = vel_train.max()
+    vel_min = vel_train.min()
+
+    # Exclude self edges
+    off_diag_idx = get_off_diag_idx(num_atoms)
+
+    train_data = data_preparation(
+        loc_train,
+        vel_train,
+        edges_train,
+        loc_min,
+        loc_max,
+        vel_min,
+        vel_max,
+        off_diag_idx,
+        num_atoms
+    )
+
+    return train_data
+
+
 def load_springs_data(root_dir, suffix, num_atoms, split='train'):
     """Based on https://github.com/ethanfetaya/NRI (MIT License)."""
 
