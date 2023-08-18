@@ -27,3 +27,4 @@ dependencies:
   - networkx
   - scikit-learn
   - matplotlib
+  - statsmodels
