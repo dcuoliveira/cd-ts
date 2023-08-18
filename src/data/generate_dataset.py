@@ -242,10 +242,10 @@ if __name__ == "__main__":
     if args.confounder:
         suffix += "_conf"
 
-    if args.temperature != 0.1:
+    if (args.temperature != 0.1) and (args.temperature is not None):
         suffix += "_inter" + str(args.temperature)
 
-    if args.length != 5000:
+    if (args.length != 5000) and (args.length is not None):
         suffix += "_l" + str(args.length)
 
     if args.num_train != 50000:
