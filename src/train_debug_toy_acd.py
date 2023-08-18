@@ -40,8 +40,8 @@ if __name__ == "__main__":
 
     ## load data
     train_dataset = load_springs_data(root_dir=os.path.join(data_path, dataset_name),
-                                    suffix=file_name,
-                                    num_atoms=num_atoms)
+                                      suffix=file_name,
+                                      num_atoms=num_atoms)
     # NOTE: Random sampling occurs in the "num_sample" dimension instead of "num_obs"
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
     off_diag = np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)
