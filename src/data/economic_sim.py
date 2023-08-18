@@ -13,6 +13,7 @@ class EconomicSim(object):
         num_timesteps = 12*20,
         num_objects = 5,
         num_lags = 2,
+        sparsity_threshold = 0.05,
     ):
         """
         
@@ -20,19 +21,18 @@ class EconomicSim(object):
         - num_timesteps: Number of observations in the time series.
         - num_objects: Number of time series.
         - num_lags: Number of lags in the VAR process.
+        - sparsity_threshold: Threshold below which coefficients are set to zero.
 
         """
         self.num_objects = num_objects
         self.num_timesteps = num_timesteps
         self.num_lags = num_lags
+        self.sparsity_threshold = sparsity_threshold
     
-    def generate_stationary_phi(self, sparsity_threshold):
+    def generate_stationary_phi(self):
         """
         Generate a stationary phi matrix for VAR process with sparsity.
-        
-        Parameters:
-        - sparsity_threshold: Threshold below which coefficients are set to zero.
-        
+                
         Returns:
         - phi: Stationary and sparse coefficient matrix of shape (self.num_objects, self.num_objects * self.num_lags).
         """
@@ -43,7 +43,7 @@ class EconomicSim(object):
             phi = np.random.randn(self.num_objects, self.num_objects * self.num_lags) * 0.1
             
             # Induce sparsity
-            phi[np.abs(phi) < sparsity_threshold] = 0
+            phi[np.abs(phi) < self.sparsity_threshold] = 0
             
             # Companion form
             companion = np.zeros((self.num_objects * self.num_lags, self.num_objects * self.num_lags))
@@ -60,7 +60,7 @@ class EconomicSim(object):
         
         raise ValueError(f"Failed to find stationary phi matrix in {max_attempts} attempts")
     
-    def simulate_VAR(self, sparsity_threshold=0.05, seed=None, phi=None, c=None):
+    def simulate_VAR(self, seed=None, phi=None, c=None):
         """
         Simulate a VAR process.
         
@@ -76,7 +76,7 @@ class EconomicSim(object):
             np.random.seed(seed)  # Seed for reproducibility
 
         if phi is None:
-            phi = generate_stationary_phi(self.num_objects, self.num_lags, sparsity_threshold)
+            phi = generate_stationary_phi(self.num_objects, self.num_lags, self.sparsity_threshold)
         
         if c is None:
             c = np.zeros(self.num_objects)
