@@ -59,6 +59,32 @@ class EconomicSim(object):
             attempt += 1
         
         raise ValueError(f"Failed to find stationary phi matrix in {max_attempts} attempts")
+
+    def simulate_VAR_ARCH(self, arch_order=1, phi=None, seed=None, alpha=None, c=None):
+        if phi is None:
+            phi = generate_stationary_phi(self.num_objects, self.num_lags)
+        
+        if c is None:
+            c = np.zeros(self.num_objects)
+        
+        data = simulate_VAR(self.num_timesteps + arch_order, self.num_objects, self.num_lags, phi, c)
+        residuals = np.zeros_like(data)
+        
+        for t in range(self.num_lags, self.num_timesteps + arch_order):
+            sum_lags = np.zeros(self.num_objects)
+            for l in range(self.num_lags):
+                sum_lags += np.dot(phi[:, self.num_objects*l:self.num_objects*(l+1)], data[t-l-1])
+            residuals[t] = data[t] - (c + sum_lags)
+        
+        for t in range(arch_order, self.num_timesteps + arch_order):
+            H_t = alpha[0]
+            for j in range(1, arch_order + 1):
+                eps = residuals[t-j].reshape(-1, 1)
+                H_t += alpha[j] * eps @ eps.T
+            L = np.linalg.cholesky(H_t)
+            data[t] = data[t] + L @ residuals[t]
+        
+        return data[arch_order:]
     
     def simulate_VAR(self, seed=None, phi=None, c=None):
         """
