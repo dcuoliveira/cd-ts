@@ -254,6 +254,9 @@ if __name__ == "__main__":
     if args.fixed_connectivity:
         suffix += "_oneconnect"
 
+    if args.n_lags is not None:
+        suffix += "_lag" + str(args.n_lags)
+
     print(suffix)
 
     # check if data path exists
@@ -292,10 +295,10 @@ if __name__ == "__main__":
                 sampled_sims=(None),
             )
 
-        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train) if loc_train is not None else None
-        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train) if vel_train is not None else None
-        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train) if edges_train is not None else None
-        np.save(os.path.join(args.datadir, "phis_train" + suffix + ".npy"), phis_train) if phis_train is not None else None
+        np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
+        np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
+        np.save(os.path.join(args.datadir, "edges_train" + suffix + ".npy"), edges_train)
+        np.save(os.path.join(args.datadir, "phis_train" + suffix + ".npy"), phis_train)
 
     else:
         raise NotImplementedError("Not implemented")
