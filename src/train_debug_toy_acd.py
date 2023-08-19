@@ -8,21 +8,18 @@ import argparse
 import pandas as pd
 import json
 
-from data_loaders import load_springs_data
+from data_loaders import load_data
 from models.MLPEncoder import MLPEncoder
 from models.MLPDecoder import MLPDecoder
 from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--num_atoms", type=int, default=5, help="Number of variables to consider.."
-)
-parser.add_argument(
-    "--simulation", type=str, default="springs", help="What simulation to generate."
-)
-parser.add_argument(
-    "--n_epochs", type=int, default=500, help="Number of epochs to use.."
-)
+parser.add_argument("--num_atoms", type=int, default=5, help="Number of variables to consider..")
+parser.add_argument("--simulation", type=str, default="econ", help="What simulation to generate.")
+parser.add_argument("--length", type=int, default=1000, help="Length of trajectory.")
+parser.add_argument("--n_lags", type=int, default=2, help="Number of lags in the simulation (Econ only).")
+parser.add_argument("--num_samples", type=int, default=100, help="Number of training simulations to generate.",)
+parser.add_argument("--n_epochs", type=int, default=500, help="Number of epochs to use..")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -31,17 +28,32 @@ if __name__ == "__main__":
     model_name = "mlp_encoder_decoder"
     device = torch.device(find_gpu_device())
     num_atoms = args.num_atoms
+    length = args.length
+    n_lags = args.n_lags
+    num_samples = args.num_samples
     dataset_name = args.simulation
     n_epochs = args.n_epochs
     learning_rate = 5e-4
-    file_name = "_springs{}".format(num_atoms) # NOTE: changed to 1000 instead of 10000 (missing edges file for 10000)
+    
+    suffix = "_" + args.simulation + str(num_atoms)
+
+    if (args.length != 5000) and (args.length is not None):
+        suffix += "_l" + str(args.length)
+
+    if args.num_samples != 50000:
+        suffix += "_s" + str(args.num_samples)
+
+    if args.n_lags is not None:
+        suffix += "_lag" + str(args.n_lags)
+    
+    
     root_path = os.path.dirname(__file__)
     data_path = os.path.join(root_path, "data")
 
     ## load data
-    train_dataset = load_springs_data(root_dir=os.path.join(data_path, dataset_name),
-                                      suffix=file_name,
-                                      num_atoms=num_atoms)
+    train_dataset = load_data(root_dir=os.path.join(data_path, dataset_name),
+                              suffix=suffix,
+                              num_atoms=num_atoms)
     # NOTE: Random sampling occurs in the "num_sample" dimension instead of "num_obs"
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
     off_diag = np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)
