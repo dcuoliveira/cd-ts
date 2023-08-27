@@ -15,94 +15,30 @@ from data.economic_sim import EconomicSim
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--train_only", type=bool, default=True, help="If to generate train data only."
-    )
-    parser.add_argument(
-        "--simulation", type=str, default="econ", help="What simulation to generate."
-    )
-    parser.add_argument(
-        "--num_train",
-        type=int,
-        default=100,
-        help="Number of training simulations to generate.",
-    )
-    parser.add_argument(
-        "--num_valid",
-        type=int,
-        default=10000,
-        help="Number of validation simulations to generate.",
-    )
-    parser.add_argument(
-        "--num_test",
-        type=int,
-        default=10000,
-        help="Number of test simulations to generate.",
-    )
-    parser.add_argument(
-        "--length", type=int, default=1000, help="Length of trajectory."
-    )
-    parser.add_argument(
-        "--sample_freq",
-        type=int,
-        default=100,
-        help="How often to sample the trajectory.",
-    )
-    parser.add_argument(
-        "--n_balls", type=int, default=5, help="Number of balls in the simulation."
-    )
-    parser.add_argument(
-        "--n_lags", type=int, default=2, help="Number of lags in the simulation (Econ only)."
-    )
-    parser.add_argument(
-        "--sparsity_threshold", type=float, default=1-0.95, help="Percentual of zeros in the adj matrix (Econ only)."
-    )
-    parser.add_argument("--seed", type=int, default=None, help="Random seed.") # 42
-    parser.add_argument(
-        "--datadir", type=str, default=os.path.dirname(__file__), help="Name of directory to save data to."
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=None, # 0.1
-        help="Temperature of SpringSim simulation.",
-    )
-    parser.add_argument(
-        "--undirected",
-        action="store_true",
-        default=False,
-        help="Have symmetric connections (non-causal)",
-    )
-    parser.add_argument(
-        "--fixed_particle",
-        action="store_true",
-        default=False,
-        help="Have one particle fixed in place and influence all others",
-    )
-    parser.add_argument(
-        "--influencer_particle",
-        action="store_true",
-        default=False,
-        help="Unobserved particle (last one) influences all",
-    )
-    parser.add_argument(
-        "--confounder",
-        action="store_true",
-        default=False,
-        help="Unobserved particle (last one) influences at least two others",
-    )
-    parser.add_argument(
-        "--uninfluenced_particle",
-        action="store_true",
-        default=False,
-        help="Unobserved particle (last one) is not influence by others",
-    )
-    parser.add_argument(
-        "--fixed_connectivity",
-        action="store_true",
-        default=False,
-        help="Have one inherent causal structure for ALL simulations",
-    )
+    parser.add_argument("--train_only", type=bool, default=True, help="If to generate train data only.")
+    parser.add_argument("--simulation", type=str, default="springs", help="What simulation to generate.")
+    parser.add_argument("--n_balls", type=int, default=5, help="Number of balls in the simulation.")
+    parser.add_argument("--temperature", type=float, default=0.1, help="Temperature of SpringSim simulation.",)
+    parser.add_argument("--length", type=int, default=1000, help="Length of trajectory.")
+    parser.add_argument("--num_train", type=int, default=1000, help="Number of training simulations to generate.")
+    
+    parser.add_argument("--sample_freq", type=int, default=100, help="How often to sample the trajectory.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+
+    parser.add_argument("--n_lags", type=int, default=None, help="Number of lags in the simulation (Econ only).")
+    parser.add_argument("--sparsity_threshold", type=float, default=None, help="Percentual of zeros in the adj matrix (Econ only).")
+
+    parser.add_argument("--num_valid", type=int, default=None, help="Number of validation simulations to generate.")
+    parser.add_argument("--num_test",type=int,default=None,help="Number of test simulations to generate.")
+    parser.add_argument("--datadir", type=str, default=os.path.dirname(__file__), help="Name of directory to save data to.")
+    
+    parser.add_argument("--undirected", action="store_true", default=False, help="Have symmetric connections (non-causal)")
+    parser.add_argument("--fixed_particle", action="store_true", default=False, help="Have one particle fixed in place and influence all others",)
+    parser.add_argument("--influencer_particle", action="store_true", default=False, help="Unobserved particle (last one) influences all")
+    parser.add_argument("--confounder", action="store_true", default=False, help="Unobserved particle (last one) influences at least two others")
+    parser.add_argument("--uninfluenced_particle", action="store_true", default=False, help="Unobserved particle (last one) is not influence by others")
+    parser.add_argument("--fixed_connectivity", action="store_true", default=False, help="Have one inherent causal structure for ALL simulations")
+   
     args = parser.parse_args()
 
     if args.fixed_particle:
