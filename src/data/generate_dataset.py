@@ -228,7 +228,7 @@ if __name__ == "__main__":
     suffix += str(args.n_balls)
 
     if args.undirected:
-        suffix += "undir"
+        suffix += "_undir"
 
     if args.fixed_particle:
         suffix += "_fixed"
@@ -242,13 +242,13 @@ if __name__ == "__main__":
     if args.confounder:
         suffix += "_conf"
 
-    if (args.temperature != 0.1) and (args.temperature is not None):
+    if (args.temperature is not None):
         suffix += "_inter" + str(args.temperature)
 
-    if (args.length != 5000) and (args.length is not None):
+    if (args.length is not None):
         suffix += "_l" + str(args.length)
 
-    if args.num_train != 50000:
+    if (args.num_train is not None):
         suffix += "_s" + str(args.num_train)
 
     if args.fixed_connectivity:
@@ -294,6 +294,7 @@ if __name__ == "__main__":
                 args.sample_freq,
                 sampled_sims=(None),
             )
+            phis_train = None
 
         np.save(os.path.join(args.datadir, "loc_train" + suffix + ".npy"), loc_train)
         np.save(os.path.join(args.datadir, "vel_train" + suffix + ".npy"), vel_train)
