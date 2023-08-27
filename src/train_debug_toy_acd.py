@@ -14,11 +14,12 @@ from models.MLPDecoder import MLPDecoder
 from utils.Pyutils import sample_gumbel, my_softmax, kl_categorical_uniform, encode_onehot, find_gpu_device, save_pkl
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--simulation", type=str, default="springs", help="What simulation to generate.")
 parser.add_argument("--num_atoms", type=int, default=5, help="Number of variables to consider..")
-parser.add_argument("--simulation", type=str, default="econ", help="What simulation to generate.")
+parser.add_argument("--temperature", type=float, default=0.1, help="Temperature of SpringSim simulation.")
 parser.add_argument("--length", type=int, default=1000, help="Length of trajectory.")
-parser.add_argument("--n_lags", type=int, default=2, help="Number of lags in the simulation (Econ only).")
-parser.add_argument("--num_samples", type=int, default=100, help="Number of training simulations to generate.",)
+parser.add_argument("--num_samples", type=int, default=1000, help="Number of training simulations to generate.",)
+parser.add_argument("--n_lags", type=int, default=None, help="Number of lags in the simulation (Econ only).")
 parser.add_argument("--n_epochs", type=int, default=500, help="Number of epochs to use..")
 
 if __name__ == "__main__":
@@ -37,7 +38,10 @@ if __name__ == "__main__":
     
     suffix = "_" + args.simulation + str(num_atoms)
 
-    if (args.length != 5000) and (args.length is not None):
+    if (args.temperature is not None):
+        suffix += "_inter" + str(args.temperature)
+
+    if (args.length is not None):
         suffix += "_l" + str(args.length)
 
     if args.num_samples != 50000:
@@ -54,6 +58,7 @@ if __name__ == "__main__":
     train_dataset = load_data(root_dir=os.path.join(data_path, dataset_name),
                               suffix=suffix,
                               num_atoms=num_atoms)
+    
     # NOTE: Random sampling occurs in the "num_sample" dimension instead of "num_obs"
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=0)
     off_diag = np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)
