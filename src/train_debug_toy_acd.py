@@ -69,7 +69,7 @@ if __name__ == "__main__":
     rel_send = torch.FloatTensor(rel_send).to(device)
 
     # load Models
-    encoder = MLPEncoder(49*4, 256, 2).to(device)
+    encoder = MLPEncoder(train_dataset.tensors[0].shape[-2] * train_dataset.tensors[0].shape[-1], 256, 2).to(device)
     decoder = MLPDecoder(4, 256, 2).to(device)
 
     # optimizers
