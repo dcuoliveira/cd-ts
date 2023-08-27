@@ -65,14 +65,13 @@ if __name__ == "__main__":
     rel_send = torch.FloatTensor(rel_send).to(device)
 
     # load Models
-    dim_feedforward_encoder = 200
     encoder = TransformerEncoder(input_dim=train_dataset.tensors[0].shape[-2] * train_dataset.tensors[0].shape[-1],
                                  hidden_dim=256,
                                  num_edges=2,
                                  n_encoder_layers=4,
                                  n_decoder_layers=4,
-                                 dim_feedforward_encoder=dim_feedforward_encoder,
-                                 dim_feedforward_decoder=dim_feedforward_encoder,
+                                 dim_feedforward_encoder=200,
+                                 dim_feedforward_decoder=200,
                                  n_heads=8,
                                  batch_first=True).to(device)
     decoder = MLPDecoder(input_dim=4,
