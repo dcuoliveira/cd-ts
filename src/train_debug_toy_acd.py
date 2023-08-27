@@ -50,7 +50,6 @@ if __name__ == "__main__":
     if args.n_lags is not None:
         suffix += "_lag" + str(args.n_lags)
     
-    
     root_path = os.path.dirname(__file__)
     data_path = os.path.join(root_path, "data")
 
