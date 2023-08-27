@@ -13,7 +13,7 @@ class TransformerEncoder(torch.nn.Module):
                  n_heads,
                  dim_feedforward_encoder,
                  dim_feedforward_decoder,
-                 batch_first=True,
+                 batch_first=False,
                  factor=True):
         super(TransformerEncoder, self).__init__()
 
@@ -92,8 +92,8 @@ class TransformerEncoder(torch.nn.Module):
 
     def node2edge(self, x, rel_rec, rel_send):
         # filter the hidden representation of each timestep to consider only the information of the receiver/sender node
-        # rel_rec[num_features * num_atoms, num_atoms] * x[num_samples, num_atoms, num_timesteps]
-        # receivers, senders: (num_samples, num_atoms,  num_timesteps*num_dims)
+        ## rel_rec[num_features * num_atoms, num_atoms] * x[num_samples, num_atoms, num_timesteps]
+        ## receivers, senders: (num_samples, num_atoms,  num_timesteps*num_dims)
         receivers = torch.matmul(rel_rec, x) 
         senders = torch.matmul(rel_send, x)
 
@@ -111,23 +111,14 @@ class TransformerEncoder(torch.nn.Module):
             # new shape: [num_samples, num_atoms, num_timesteps*num_feature_per_obj]
         else:
             x = inputs.view(1, inputs.shape[0], inputs.shape[1])
-
-        if self.batch_first:
-            x = x.permute(1, 0, 2)
-
-        # NOTE: num_timesteps*num_feature_per_obj timeseps => num_timesteps*num_dims parameters on the MLP
-        # NOTE: why do we need to build the mlp parameters associated to the num_timesteps*num_feature_per_obj instead of num_atoms ?
         
         # node hidden representation
+        ## NOTE: If self.batch_first=False => Attention is applied to the num_samples (batch_size) dimension; Else Attention is applied to the num_objects dimension
         x = self.transformer1(x)
-        x = self.permute_dims(x)
 
         # from nodes to edges hidden representation
         x = self.node2edge(x, rel_rec, rel_send)
-        x = self.permute_dims(x)
         x = self.transformer2(x)
-
-        x = self.permute_dims(x)
 
         # keep edges first interaction hidden representation
         x_skip = x
@@ -135,16 +126,13 @@ class TransformerEncoder(torch.nn.Module):
         if self.factor:
             # aggregate edge represantations back to nodes (now we have more than one neighbor interaction for each node)
             x = self.edge2node(x, rel_rec)
-            x = self.permute_dims(x)
             x = self.transformer3(x)
-            x = self.permute_dims(x)
 
             # from nodes to edges hidden representation
             x = self.node2edge(x, rel_rec, rel_send)
 
             # add edges edges first interaction hidden representation to the edges final interation
             x = torch.cat((x, x_skip), dim=2)
-            x = self.permute_dims(x)
             x = self.transformer4(x)
         else:
             x = self.permute_dims(x)
@@ -153,7 +141,5 @@ class TransformerEncoder(torch.nn.Module):
             x = torch.cat((x, x_skip), dim=2)
             x = self.permute_dims(x)
             x = self.transformer4(x)
-
-        x = self.permute_dims(x)
         
         return self.fc_out(x)
