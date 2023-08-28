@@ -142,25 +142,21 @@ class Transformer(nn.Module):
                 input_mask: Tensor=None) -> Tensor:
    
         # linear layer
-        # output shape: [src_seq_length, batch_size, hidden_dim]
+        ## output shape: [src_seq_length, batch_size, hidden_dim]
         x = self.encoder_input_layer(inputs)
         # positional encoding
         x = self.positional_encoding_layer(x)
 
         # transformer encoder: muti-head self attention -> add & norm -> feed forward -> add & norm
-        # each trasnformer encode consists of a multi-head self attention layer, a feed forward layer, and 2 residual sublayers
-        # avici encoder consists of 4 transformer encoders
-        # src shape: [src_seq_length, batch_size, hidden_dim]
-        # NOTE - need attention mask ?
-        # NOTE - modify self-attention to attend over d or n ?
+        ## src shape: [src_seq_length, batch_size, hidden_dim]
         encoder_output = self.encoder(src=x)
 
         # transformer decoder I: masked muti-head self attention -> add & norm
-        # output shape: [tgt_seq_length, batch_size, hidden_dim]
+        ## output shape: [tgt_seq_length, batch_size, hidden_dim]
         decoder_output = self.decoder_input_layer(encoder_output)
 
         # transformer decoder II: muti-head attention -> add & norm -> feed forward -> add & norm
-        # output shape: [tgt_seq_length, batch_size, hidden_dim]
+        ## output shape: [tgt_seq_length, batch_size, hidden_dim]
         decoder_output = self.decoder(
             tgt=decoder_output,
             memory=x,
@@ -169,7 +165,7 @@ class Transformer(nn.Module):
             )
 
         # linear mapping
-        # output shape [tgt_seq_length, batch_size, num_features]
+        ## output shape [tgt_seq_length, batch_size, num_features]
         decoder_output = self.linear_mapping(encoder_output)
 
         return decoder_output
