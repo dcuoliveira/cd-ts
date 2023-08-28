@@ -113,7 +113,8 @@ class TransformerEncoder(torch.nn.Module):
             x = inputs.view(1, inputs.shape[0], inputs.shape[1])
         
         # node hidden representation
-        ## NOTE: If self.batch_first=False => Attention is applied to the num_samples (batch_size) dimension; Else Attention is applied to the num_objects dimension
+        ## NOTE: Attention is applied to the num_samples (batch_size) dimension
+        ## NOTE - The decoder of each self.transformer can use an attention mask, but it is not. Do we need this here?
         x = self.transformer1(x)
 
         # from nodes to edges hidden representation
