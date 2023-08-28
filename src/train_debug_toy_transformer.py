@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     # load Models
     dim_feedforward_encoder = 200
-    encoder = TransformerEncoder(input_dim=train_dataset.tensors[0].shape[-2] * train_dataset.tensors[0].shape[-1],
+    encoder = TransformerEncoder(input_dim=train_dataset.tensors[0].shape[2] * train_dataset.tensors[0].shape[3],
                                  hidden_dim=256,
                                  num_edges=2,
                                  n_encoder_layers=4,
