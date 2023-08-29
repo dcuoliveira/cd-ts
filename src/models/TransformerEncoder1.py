@@ -105,10 +105,10 @@ class TransformerEncoder(torch.nn.Module):
         return x.permute(1, 0, 2) if self.batch_first else x
 
     def forward(self, inputs, rel_rec, rel_send):
-        B, N, T, D = inputs.size()
+        S, N, T, D = inputs.size()
 
         # input shape: [num_samples (batch_size), num_objects, num_timesteps, num_dims]
-        x = inputs.transpose(1,2).reshape(B*T, N, D)
+        x = inputs.transpose(1,2).reshape(S*T, N, D)
         # new shape: [num_samples*num_timesteps, num_atoms, num_dims]
         
         # node hidden representation
