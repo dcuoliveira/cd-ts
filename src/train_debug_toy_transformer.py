@@ -43,7 +43,7 @@ if __name__ == "__main__":
     learning_rate = 5e-4
     batch_first = True
     input_dim = num_atoms
-    n_encoder_layers = n_decoder_layers = 10
+    n_encoder_layers = n_decoder_layers = 5
     embedd_hidden_dim = n_ffnn_encoder_hidden = n_ffnn_decoder_hidden = 200
     n_encoder_heads = n_decoder_heads = 10
     encoder_dropout = decoder_dropout = pos_enc_dropout = 0.1
