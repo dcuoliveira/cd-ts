@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # input and output parameters
     root_path = os.path.dirname(__file__)
     data_path = os.path.join(root_path, "data")
-    model_name = "transformer_encoder_mlp_decoder"
+    model_name = "transformer_encoder_nomask_mlp_decoder"
     simulation = args.simulation
     num_atoms = args.num_atoms
     temperature = args.temperature
@@ -43,9 +43,8 @@ if __name__ == "__main__":
     learning_rate = 5e-4
     batch_first = True
     input_dim = num_atoms
-    embedd_hidden_dim = 200
-    n_encoder_layers = n_decoder_layers = 5
-    n_ffnn_encoder_hidden = n_ffnn_decoder_hidden = 200
+    n_encoder_layers = n_decoder_layers = 10
+    embedd_hidden_dim = n_ffnn_encoder_hidden = n_ffnn_decoder_hidden = 200
     n_encoder_heads = n_decoder_heads = 10
     encoder_dropout = decoder_dropout = pos_enc_dropout = 0.1
     num_edges = 2
