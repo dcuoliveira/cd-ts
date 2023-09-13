@@ -68,6 +68,7 @@ class Transformer(nn.Module):
         dim_feedforward_encoder: int=2048,
         dim_feedforward_decoder: int=2048,
         num_predicted_features: int=1,
+        out_dim: int=1,
         batch_first: bool=True,
         ): 
 
@@ -100,7 +101,7 @@ class Transformer(nn.Module):
         
         self.linear_mapping = nn.Linear(
             in_features=n_encoder_input_layer_out, 
-            out_features=num_predicted_features
+            out_features=out_dim
             )
 
         self.positional_encoding_layer = PositionalEncoder(
