@@ -57,20 +57,27 @@ class PositionalEncoder(nn.Module):
 class Transformer(nn.Module):
 
     def __init__(self, 
-        n_encoder_input_layer_in: int,
-        n_encoder_input_layer_out: int,
-        n_encoder_layers: int=4,
-        n_decoder_layers: int=4,
-        n_heads: int=8,
-        dropout_encoder: float=0.2, 
-        dropout_decoder: float=0.2, 
-        dropout_pos_enc: float=0.1,
-        dim_feedforward_encoder: int=2048,
-        dim_feedforward_decoder: int=2048,
-        num_predicted_features: int=1,
-        out_dim: int=1,
-        batch_first: bool=True,
-        ): 
+                 input_dim: int,
+
+                 embedd_hidden_dim: int,
+                 
+                 pos_enc_dropout: float,
+
+                 encoder_input_dim: int,
+                 n_encoder_layers: int,
+                 n_ffnn_encoder_hidden: int,
+                 n_encoder_heads: int,
+                 encoder_dropout: float, 
+  
+                 decoder_input_dim: int,
+                 n_decoder_layers: int,
+                 n_ffnn_decoder_hidden: int,
+                 n_decoder_heads: int,
+                 decoder_dropout: float, 
+
+                 out_dim: int,
+                 
+                 batch_first: bool): 
 
         """
         Args:
@@ -89,84 +96,73 @@ class Transformer(nn.Module):
 
         super().__init__() 
 
-        self.encoder_input_layer = nn.Linear(
-            in_features=n_encoder_input_layer_in, 
-            out_features=n_encoder_input_layer_out 
-            )
+        self.linear_encoder_embedding = nn.Linear(in_features=input_dim, 
+                                              out_features=embedd_hidden_dim)
         
-        self.decoder_input_layer = nn.Linear(
-            in_features=num_predicted_features,
-            out_features=n_encoder_input_layer_out
-            )  
+        self.positional_encoding_layer = PositionalEncoder(d_model=embedd_hidden_dim,
+                                                           dropout=pos_enc_dropout) 
+
+        encoder_layer = nn.TransformerEncoderLayer(d_model=encoder_input_dim, 
+                                                   nhead=n_encoder_heads,
+                                                   dim_feedforward=n_ffnn_encoder_hidden,
+                                                   dropout=encoder_dropout,
+                                                   batch_first=batch_first)
+
+        self.encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
+                                             num_layers=n_encoder_layers,
+                                             norm=None)
         
-        self.linear_mapping = nn.Linear(
-            in_features=n_encoder_input_layer_out, 
-            out_features=out_dim
-            )
-
-        self.positional_encoding_layer = PositionalEncoder(
-            d_model=n_encoder_input_layer_out,
-            dropout=dropout_pos_enc
-            )
-
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=n_encoder_input_layer_out, 
-            nhead=n_heads,
-            dim_feedforward=dim_feedforward_encoder,
-            dropout=dropout_encoder,
-            batch_first=batch_first
-            )
-
-        self.encoder = nn.TransformerEncoder(
-            encoder_layer=encoder_layer,
-            num_layers=n_encoder_layers, 
-            norm=None
-            )
+        self.linear_decoder_embedding = nn.Linear(in_features=input_dim,
+                                              out_features=embedd_hidden_dim) 
         
-        
-        decoder_layer = nn.TransformerDecoderLayer(
-            d_model=n_encoder_input_layer_out,
-            nhead=n_heads,
-            dim_feedforward=dim_feedforward_decoder,
-            dropout=dropout_decoder,
-            batch_first=batch_first
-            )
+        decoder_layer = nn.TransformerDecoderLayer(d_model=decoder_input_dim,
+                                                   nhead=n_decoder_heads,
+                                                   dim_feedforward=n_ffnn_decoder_hidden,
+                                                   dropout=decoder_dropout,
+                                                   batch_first=batch_first)
 
-        self.decoder = nn.TransformerDecoder(
-            decoder_layer=decoder_layer,
-            num_layers=n_decoder_layers, 
-            norm=None
-            )
+        self.decoder = nn.TransformerDecoder(decoder_layer=decoder_layer,
+                                             num_layers=n_decoder_layers, 
+                                             norm=None)
+        
+        self.linear_mapping = nn.Linear(in_features=n_ffnn_decoder_hidden,
+                                        out_features=out_dim)
 
     def forward(self,
-                inputs: Tensor,
+                src: Tensor=None,
+                tgt: Tensor=None,
                 input_mask: Tensor=None) -> Tensor:
-   
-        # linear layer
-        ## output shape: [src_seq_length, batch_size, hidden_dim]
-        x = self.encoder_input_layer(inputs)
-        # positional encoding
-        x = self.positional_encoding_layer(x)
+        
+        # NOTE: src and tgt are the same for all inputs we have. Need to understand the implications of it.
+        # NOTE: We are always considering input_mask=None. This means that we are ignoring the time ordering of the input on the decoder.
 
-        # transformer encoder: muti-head self attention -> add & norm -> feed forward -> add & norm
+        if tgt is None:
+            tgt = src
+
+        # create embeddings on the feature dimension for the src input
+        ## output shape: [batch_size, src_seq_length, embedding_dim]
+        src_embedd = self.linear_encoder_embedding(src)
+
+        # add positional encoding
+        src_embedd_pos = self.positional_encoding_layer(src_embedd)
+
+        # transformer encoder: embeddings -> {mhsa -> add & norm -> ffnn -> add & norm} * n -> encoder out
         ## src shape: [src_seq_length, batch_size, hidden_dim]
-        encoder_output = self.encoder(src=x)
+        src_embedd_pos_encoder = self.encoder(src=src_embedd_pos)
 
-        # transformer decoder I: masked muti-head self attention -> add & norm
-        ## output shape: [tgt_seq_length, batch_size, hidden_dim]
-        decoder_output = self.decoder_input_layer(encoder_output)
+        # create embeddings on the feature dimension for the tgt input
+        ## output shape: [batch_size, tgt_seq_length, hidden_dim]
+        tgt_embedd = self.linear_decoder_embedding(tgt)
 
-        # transformer decoder II: muti-head attention -> add & norm -> feed forward -> add & norm
+        # transformer decoder: embeddings -> {masked mhsa -> add & norm -> (-> encoder out) mhsa -> add & norm -> ffnn -> add & norm} * n -> decoder out
         ## output shape: [tgt_seq_length, batch_size, hidden_dim]
-        decoder_output = self.decoder(
-            tgt=decoder_output,
-            memory=x,
-            tgt_mask=input_mask,
-            memory_mask=input_mask # src and tgt masks may be different
-            )
+        tgt_embedd_decoder = self.decoder(tgt=tgt_embedd,
+                                          memory=src_embedd_pos_encoder,
+                                          tgt_mask=input_mask,
+                                          memory_mask=input_mask)
 
         # linear mapping
         ## output shape [tgt_seq_length, batch_size, num_features]
-        decoder_output = self.linear_mapping(encoder_output)
+        out = self.linear_mapping(tgt_embedd_decoder)
 
-        return decoder_output
+        return out

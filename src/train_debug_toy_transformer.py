@@ -26,32 +26,47 @@ parser.add_argument("--atten_mask", type=bool, default=True, help="What simulati
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    # running parameters
-    model_name = "transformer_encoder_mlp_decoder"
-    device = torch.device(find_gpu_device())
-    num_atoms = args.num_atoms
-    dataset_name = args.simulation
-    n_epochs = args.n_epochs
-    learning_rate = 5e-4
+    # input and output parameters
     root_path = os.path.dirname(__file__)
     data_path = os.path.join(root_path, "data")
+    model_name = "transformer_encoder_mlp_decoder"
+    simulation = args.simulation
+    num_atoms = args.num_atoms
+    temperature = args.temperature
+    length = args.length
+    num_samples = args.num_samples
+    n_lags = args.n_lags
 
-    suffix = "_" + args.simulation + str(num_atoms)
+    # trainning parameters
+    device = torch.device(find_gpu_device())
+    n_epochs = args.n_epochs
+    learning_rate = 5e-4
+    batch_first = True
+    input_dim = num_atoms
+    embedd_hidden_dim = 200
+    n_encoder_layers = n_decoder_layers = 5
+    n_ffnn_encoder_hidden = n_ffnn_decoder_hidden = 200
+    n_encoder_heads = n_decoder_heads = 10
+    encoder_dropout = decoder_dropout = pos_enc_dropout = 0.1
+    num_edges = 2
 
-    if (args.temperature is not None):
-        suffix += "_inter" + str(args.temperature)
+    if num_atoms is not None:
+        suffix = "_{simulation}{num_atoms}".format(simulation=simulation, num_atoms=str(num_atoms))
 
-    if (args.length is not None):
-        suffix += "_l" + str(args.length)
+    if temperature is not None:
+        suffix += "_inter{temperature}".format(temperature=str(temperature))
 
-    if args.num_samples != 50000:
-        suffix += "_s" + str(args.num_samples)
+    if length is not None:
+        suffix += "_l{length}".format(length=str(length))
 
-    if args.n_lags is not None:
-        suffix += "_lag" + str(args.n_lags)
+    if num_samples is not None:
+        suffix += "_s{num_samples}".format(num_samples=str(num_samples))
+
+    if n_lags is not None:
+        suffix += "_lag{n_lags}".format(n_lags=str(n_lags))
 
     ## load data
-    train_dataset = load_data(root_dir=os.path.join(data_path, dataset_name),
+    train_dataset = load_data(root_dir=os.path.join(data_path, simulation),
                               suffix=suffix,
                               num_atoms=num_atoms)
     
@@ -65,19 +80,31 @@ if __name__ == "__main__":
     rel_send = torch.FloatTensor(rel_send).to(device)
 
     # load Models
-    dim_feedforward_encoder = 200
-    encoder = TransformerEncoder(input_dim=train_dataset.tensors[0].shape[2] * train_dataset.tensors[0].shape[3],
-                                 hidden_dim=256,
-                                 num_edges=2,
-                                 n_encoder_layers=4,
-                                 n_decoder_layers=4,
-                                 dim_feedforward_encoder=dim_feedforward_encoder,
-                                 dim_feedforward_decoder=dim_feedforward_encoder,
-                                 n_heads=8,
-                                 batch_first=True).to(device)
+    encoder = TransformerEncoder(input_dim=input_dim,
+                                 
+                                 embedd_hidden_dim=embedd_hidden_dim,
+
+                                 pos_enc_dropout=pos_enc_dropout,
+                                 
+                                 n_encoder_layers=n_encoder_layers,
+                                 n_ffnn_encoder_hidden=n_ffnn_encoder_hidden,
+                                 n_encoder_heads=n_encoder_heads,
+                                 encoder_dropout=encoder_dropout,
+                                 
+                                 n_decoder_layers=n_decoder_layers,
+                                 n_ffnn_decoder_hidden=n_ffnn_decoder_hidden,
+                                 n_decoder_heads=n_decoder_heads,
+                                 decoder_dropout=decoder_dropout,
+
+                                 transformer_out_dim=input_dim,
+
+                                 n_linear_input_out=(train_dataset.tensors[0].shape[-1] * train_dataset.tensors[0].shape[-2]) * 6,
+                                 
+                                 batch_first=batch_first,
+                                 num_edges=num_edges).to(device)
     decoder = MLPDecoder(input_dim=4,
                          hidden_dim=256,
-                         num_edges=2).to(device)
+                         num_edges=num_edges).to(device)
 
     # optimizers
     optimizer = torch.optim.Adam(chain(encoder.parameters(), decoder.parameters()), lr=learning_rate)
@@ -96,16 +123,9 @@ if __name__ == "__main__":
             features = features.to(device)
             gt_edges = gt_edges.to(device)
 
-            # train encoder
-            src_mask = generate_square_subsequent_mask(
-                            dim1=features.shape[0],
-                            dim2=dim_feedforward_encoder,
-                            atten_mask=args.atten_mask)
-
-            ## features: (batch_size, num_objects, num_timesteps, num_feature_per_obj)
-            # [output_sequence_length, enc_seq_len]
+            ## features: [batch_size, num_objects, num_timesteps, num_feature_per_obj]
             logits = encoder.forward(features, rel_rec=rel_rec, rel_send=rel_send)
-            # NOTE - Why do we have 2*num_objects instead of num_objects?
+
             ## logits: (batch_size, 2*num_objects)
             prob = my_softmax(logits, -1)
             
