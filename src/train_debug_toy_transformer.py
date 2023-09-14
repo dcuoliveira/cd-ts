@@ -49,8 +49,10 @@ if __name__ == "__main__":
     encoder_dropout = decoder_dropout = pos_enc_dropout = 0.1
     num_edges = 2
 
+    suffix = "_{simulation}".format(simulation=simulation)
+
     if num_atoms is not None:
-        suffix = "_{simulation}{num_atoms}".format(simulation=simulation, num_atoms=str(num_atoms))
+        suffix += "{num_atoms}".format(num_atoms=str(num_atoms))
 
     if temperature is not None:
         suffix += "_inter{temperature}".format(temperature=str(temperature))
