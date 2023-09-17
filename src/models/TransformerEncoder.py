@@ -183,7 +183,7 @@ class TransformerEncoder(torch.nn.Module):
     def permute_dims(self, x):
         return x.permute(1, 0, 2) if self.batch_first else x
 
-    def forward(self, inputs, rel_rec, rel_send):
+    def forward(self, inputs, rel_rec, rel_send, mask=None):
         if len(inputs.shape) > 3:
             # input shape: [num_samples (batch_size), num_objects, num_timesteps, num_feature_per_obj]
             B, N, T, D = inputs.shape
@@ -195,7 +195,7 @@ class TransformerEncoder(torch.nn.Module):
         # node hidden representation
         ## NOTE: Attention is applied to the num_samples (batch_size) dimension
         ## NOTE - The decoder of each self.transformer can use an attention mask, but it is not. Do we need this here?
-        x = self.transformer1(x)
+        x = self.transformer1.forward(src=x, input_mask=mask)
 
         # from nodes to edges hidden representation
         x = self.node2edge(x, rel_rec, rel_send)
