@@ -97,7 +97,7 @@ class Transformer(nn.Module):
         super().__init__() 
 
         self.linear_encoder_embedding = nn.Linear(in_features=input_dim, 
-                                              out_features=embedd_hidden_dim)
+                                                  out_features=embedd_hidden_dim)
         
         self.positional_encoding_layer = PositionalEncoder(d_model=embedd_hidden_dim,
                                                            dropout=pos_enc_dropout) 
@@ -113,7 +113,7 @@ class Transformer(nn.Module):
                                              norm=None)
         
         self.linear_decoder_embedding = nn.Linear(in_features=input_dim,
-                                              out_features=embedd_hidden_dim) 
+                                                  out_features=embedd_hidden_dim) 
         
         decoder_layer = nn.TransformerDecoderLayer(d_model=decoder_input_dim,
                                                    nhead=n_decoder_heads,
