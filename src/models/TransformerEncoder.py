@@ -187,11 +187,12 @@ class TransformerEncoder(torch.nn.Module):
         if len(inputs.shape) > 3:
             # input shape: [num_samples (batch_size), num_objects, num_timesteps, num_feature_per_obj]
             B, N, T, D = inputs.shape
+            # x = inputs.view(B, N, T*D)
             x = inputs.view(B, T*D, N)
             # new shape: [num_samples, num_atoms, num_timesteps*num_feature_per_obj]
         else:
             x = inputs.view(1, inputs.shape[0], inputs.shape[1])
-        
+         
         # node hidden representation
         ## NOTE: Attention is applied to the num_samples (batch_size) dimension
         ## NOTE - The decoder of each self.transformer can use an attention mask, but it is not. Do we need this here?
